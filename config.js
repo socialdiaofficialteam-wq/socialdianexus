@@ -4,6 +4,6 @@
 //   supabaseAnonKey  = anon / publishable key   (مش الـ service_role أبداً!)
 // سيبهم فاضيين = المنصة بتشتغل محلياً في المتصفح بدون تسجيل دخول.
 window.NEXUS_CONFIG = {
-  supabaseUrl: '',
-  supabaseAnonKey: ''
+  supabaseUrl: 'https://ngcuwzwztqbeqvuowstk.supabase.co',
+  supabaseAnonKey: 'sb_publishable_GwQQ7uZ71LeOniNqwHOYAQ_iiL9Ui4h'
 };
