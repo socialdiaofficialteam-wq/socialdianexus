@@ -1,7 +1,0 @@
-{
-  "name": "socialdia-nexus",
-  "version": "1.2.0",
-  "private": true,
-  "description": "Socialdia Nexus — subscription platform for marketing agencies (MVP)",
-  "engines": { "node": ">=18" }
-}
