@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Socialdia Nexus</title>
+  <meta name="description" content="Socialdia Nexus: منصة اشتراك شهري لوكالات التسويق. عملاء، مهام، تقويم محتوى، وأدوات ذكاء اصطناعي.">
+  <meta name="theme-color" content="#f40268">
+  <link rel="icon" type="image/png" href="logo-mark.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="landing" class="landing" hidden></div>
+  <div id="auth" class="auth" hidden></div>
+  <div class="app">
+    <aside id="side" class="side"></aside>
+    <div class="main">
+      <header class="top">
+        <button class="icon-btn menu-btn" data-action="menu" aria-label="menu">☰</button>
+        <h1 id="title"></h1>
+        <button id="langbtn" class="btn ghost" data-action="lang"></button>
+      </header>
+      <main id="view"></main>
+    </div>
+  </div>
+
+  <div id="modal" class="modal" hidden>
+    <form id="modal-form" autocomplete="off">
+      <h3 id="modal-title"></h3>
+      <div id="modal-body"></div>
+      <div class="modal-actions">
+        <button type="button" class="btn danger" id="modal-del" data-action="modal-del" hidden></button>
+        <span class="spacer"></span>
+        <button type="button" class="btn ghost" id="modal-cancel" data-action="close"></button>
+        <button type="submit" class="btn primary" id="modal-ok"></button>
+      </div>
+    </form>
+  </div>
+  <div id="toast" class="toast" hidden></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+  <script src="site.js"></script>
+</body>
+</html>
