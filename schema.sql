@@ -227,6 +227,6 @@ end $$;
 -- 1) سجّل حساب عادي من الموقع بإيميلك.
 -- 2) بدّل الإيميل تحت بإيميلك وشغّل السطرين دول لوحدهم:
 --
--- insert into public.admins (user_id)
---   select id from auth.users where email = 'YOUR_EMAIL@example.com'
---   on conflict do nothing;
+insert into public.admins (user_id)
+ select id from auth.users where email = 'admin@adsocialdia.app'
+ on conflict do nothing;
