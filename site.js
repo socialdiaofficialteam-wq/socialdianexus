@@ -39,6 +39,12 @@ const DEFAULT_SITE = {
     plans_sub_ar: 'الأسعار بالجنيه المصري، والاشتراك شهري.', plans_sub_en: 'Prices in Egyptian pounds, billed monthly.',
     faq_title_ar: 'أسئلة شائعة', faq_title_en: 'Frequently asked questions'
   },
+  stats: [
+    { num: '5', label_ar: 'أدوات ذكاء اصطناعي للمحتوى', label_en: 'AI content tools' },
+    { num: '6', label_ar: 'منصات سوشيال في تقويم واحد', label_en: 'social platforms in one calendar' },
+    { num: '2', label_ar: 'لغتين بدعم كامل للعربي', label_en: 'languages, Arabic-first' },
+    { num: '1', label_ar: 'لوحة واحدة لشغل الوكالة كله', label_en: 'dashboard for the whole agency' }
+  ],
   features: [
     { icon: '👥', title_ar: 'إدارة العملاء', title_en: 'Client management', text_ar: 'ملف لكل عميل: المجال، الاشتراك الشهري، بيانات التواصل، وكل مهامه وبوستاته.', text_en: 'A profile per client: industry, monthly retainer, contact details, plus all their tasks and posts.' },
     { icon: '✅', title_ar: 'لوحة مهام Kanban', title_en: 'Kanban task board', text_ar: 'اسحب المهمة بين للتنفيذ وقيد التنفيذ وتم، مع أولويات ومواعيد تسليم.', text_en: 'Drag tasks across To do, In progress and Done, with priorities and due dates.' },
@@ -153,6 +159,75 @@ function brandLockup() {
   return `<span class="lockup">${SITE.logo ? `<img class="mark" src="${esc(SITE.logo)}" alt="">` : ''}${brandHTML()}</span>`;
 }
 
+const numText = raw => {
+  const m = /^(\D*)(\d+(?:\.\d+)?)(.*)$/.exec(String(raw == null ? '' : raw).trim());
+  return m ? m[1] + Number(m[2]).toLocaleString(loc()) + m[3] : String(raw == null ? '' : raw);
+};
+let fxScroll = false;
+function initLandingFx() {
+  const L = $('#landing');
+  if (!L || !L.querySelectorAll) return;
+  const reduce = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  const count = el => {
+    const m = /^(\D*)(\d+(?:\.\d+)?)(.*)$/.exec(String(el.dataset.raw || ''));
+    if (!m || reduce) return;
+    const to = Number(m[2]), t0 = performance.now(), dur = 1500;
+    const f = now => {
+      const k = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - k, 3);
+      el.textContent = m[1] + Math.round(to * e).toLocaleString(loc()) + m[3];
+      if (k < 1) requestAnimationFrame(f);
+    };
+    requestAnimationFrame(f);
+  };
+  const items = Array.from(L.querySelectorAll('.rv, .cnt'));
+  if (typeof IntersectionObserver === 'undefined' || reduce) return;
+  L.classList.add('fx');
+  const io = new IntersectionObserver(es => es.forEach(en => {
+    if (!en.isIntersecting) return;
+    const el = en.target; io.unobserve(el);
+    if (el.classList.contains('cnt')) { count(el); return; }
+    el.classList.add('in');
+    setTimeout(() => el.classList.add('done'), 1000 + (Number(el.style.getPropertyValue('--i')) || 0) * 90);
+  }), { threshold: 0.14, rootMargin: '0px 0px -6% 0px' });
+  items.forEach(el => io.observe(el));
+
+  // ميل لوحة الهيرو مع الماوس
+  const stage = L.querySelector('.ld-stage'), mock = L.querySelector('.ld-mock');
+  if (stage && mock) {
+    stage.addEventListener('mousemove', e => {
+      const r = stage.getBoundingClientRect();
+      const x = (e.clientX - r.left) / r.width - 0.5, y = (e.clientY - r.top) / r.height - 0.5;
+      mock.style.setProperty('--ry', (x * 14).toFixed(2) + 'deg');
+      mock.style.setProperty('--rx', (-y * 10).toFixed(2) + 'deg');
+    });
+    stage.addEventListener('mouseleave', () => { mock.style.removeProperty('--ry'); mock.style.removeProperty('--rx'); });
+  }
+  if (!L._fx) {
+    L._fx = true;
+    // بقعة ضوء بتتبع الماوس على الكروت
+    L.addEventListener('mousemove', e => {
+      const c = e.target.closest && e.target.closest('.ld-card, .plan');
+      if (!c) return;
+      const r = c.getBoundingClientRect();
+      c.style.setProperty('--mx', (e.clientX - r.left) + 'px');
+      c.style.setProperty('--my', (e.clientY - r.top) + 'px');
+    });
+  }
+  if (!fxScroll) {
+    fxScroll = true;
+    let tick = false;
+    const upd = () => {
+      tick = false;
+      const h = document.querySelector('.ld-head'), pg = document.querySelector('.ld-progress');
+      const y = window.scrollY || 0, max = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+      if (h && h.classList) h.classList.toggle('scrolled', y > 24);
+      if (pg && pg.style) pg.style.setProperty('--p', Math.min(1, y / max).toFixed(4));
+    };
+    window.addEventListener('scroll', () => { if (!tick) { tick = true; requestAnimationFrame(upd); } }, { passive: true });
+  }
+  if (document.querySelector) { const h = document.querySelector('.ld-head'); if (h && h.classList) h.classList.toggle('scrolled', (window.scrollY || 0) > 24); }
+}
+
 function planBullets(p) {
   const b = lines(tx(p, 'features'));
   if (typeof p.max_clients === 'number') {
@@ -174,19 +249,24 @@ function renderLanding() {
   const phone = String(c.phone || '').trim();
 
   const features = s.features.map((f, i) => `
-    <div class="card ld-card" style="--c:var(${tints[i % 4]})">
+    <div class="card ld-card rv zoom" style="--c:var(${tints[i % 4]});--i:${i % 3}">
       <div class="ld-ic">${esc(f.icon || '⭐')}</div>
       <h3>${esc(tx(f, 'title'))}</h3>
       <p>${esc(tx(f, 'text'))}</p>
     </div>`).join('');
 
   const steps = s.steps.map((f, i) => `
-    <div class="card ld-step" style="--c:var(${tints[i % 4]})">
+    <div class="card ld-step rv" style="--c:var(${tints[i % 4]});--i:${i}">
       <div class="n">${(i + 1).toLocaleString(loc())}</div>
       <h3>${esc(tx(f, 'title'))}</h3>
       <p>${esc(tx(f, 'text'))}</p>
     </div>`).join('');
 
+  const words = tx(h, 'title').split(/\s+/).filter(Boolean).map((w, i) => `<span class="w" style="--i:${i}">${esc(w)}</span>`).join(' ');
+  const stats = (s.stats || []).map((x, i) => `<div class="ld-stat rv" style="--i:${i}"><b class="cnt" data-raw="${esc(x.num)}">${esc(numText(x.num))}</b><span>${esc(tx(x, 'label'))}</span></div>`).join('');
+  const pcols = ['--brand', '--sec', '--acc', '--ok', '--brand-2', '--sec'];
+  const pf = ['Instagram', 'Facebook', 'TikTok', 'LinkedIn', 'X', 'YouTube'].map((n, i) => `<span class="pf" style="--c:var(${pcols[i]})">${n}</span>`).join('');
+  const bars = [.55, .8, .45, .95, .7, 1].map((h2, i) => `<i style="--h:${h2};--i:${i};--c:var(${pcols[i % 4]})"></i>`).join('');
   const plans = s.plans.map(p => {
     const name = tx(p, 'name');
     const label = esc(tx(p, 'cta') || t('subscribe'));
@@ -194,17 +274,17 @@ function renderLanding() {
       ? `<a class="btn block ${p.popular ? 'primary' : ''}" target="_blank" rel="noopener" href="https://wa.me/${wa}?text=${encodeURIComponent(t('wa_msg').replace('{plan}', name).replace('{brand}', s.brand))}">${label}</a>`
       : `<button class="btn block ${p.popular ? 'primary' : ''}" data-action="go-signup">${label}</button>`;
     return `
-    <div class="card plan ${p.popular ? 'pop' : ''}">
+    <div class="card plan rv zoom ${p.popular ? 'pop' : ''}" style="--i:${s.plans.indexOf(p)}">
       ${p.popular ? `<span class="badge">${t('popular')}</span>` : ''}
       <h3>${esc(name)}</h3>
       <p class="pdesc">${esc(tx(p, 'desc'))}</p>
-      <div class="price"><b>${Number(p.price || 0).toLocaleString(loc())}</b> <span>${t('cur')}</span> <small>/ ${t('per_month')}</small></div>
+      <div class="price"><b class="cnt" data-raw="${Number(p.price || 0)}">${Number(p.price || 0).toLocaleString(loc())}</b> <span>${t('cur')}</span> <small>/ ${t('per_month')}</small></div>
       <ul>${planBullets(p).map(x => `<li>${esc(x)}</li>`).join('')}</ul>
       ${cta}
     </div>`;
   }).join('');
 
-  const faq = s.faq.map(q => `<details class="card faq"><summary>${esc(tx(q, 'q'))}</summary><p>${esc(tx(q, 'a'))}</p></details>`).join('');
+  const faq = s.faq.map((q, i) => `<details class="card faq rv" style="--i:${i % 4}"><summary>${esc(tx(q, 'q'))}</summary><p>${esc(tx(q, 'a'))}</p></details>`).join('');
 
   const contactBits = [
     wa ? `<a href="https://wa.me/${wa}" target="_blank" rel="noopener">💬 ${t('whatsapp')}</a>` : '',
@@ -214,6 +294,7 @@ function renderLanding() {
   ].filter(Boolean).join('');
 
   $('#landing').innerHTML = `
+    <div class="ld-progress" aria-hidden="true"></div>
     ${s.announce.on ? `<div class="ld-announce">${esc(tx(s.announce, 'text'))}</div>` : ''}
     <header class="ld-head"><div class="ld-wrap ld-nav">
       <button class="brandbtn" data-action="go-home" aria-label="home">${brandLockup()}</button>
@@ -229,29 +310,48 @@ function renderLanding() {
       <button class="btn primary" data-action="go-login">${inApp && CLOUD ? t('open_app') : t('auth_login')}</button>
     </div></header>
 
-    <section class="ld-hero"><div class="ld-wrap hero-grid">
-      <div>
-        <h1 class="ld-title">${esc(tx(h, 'title'))}</h1>
-        <p class="ld-lead">${esc(tx(h, 'sub'))}</p>
-        <div class="ld-cta">
-          <button class="btn primary lg" data-action="go-signup">${esc(tx(h, 'cta1'))}</button>
-          <button class="btn lg" data-action="scroll" data-id="plans">${esc(tx(h, 'cta2'))}</button>
+    <section class="ld-hero">
+      <div class="aurora" aria-hidden="true"><i></i><i></i><i></i></div>
+      <div class="ld-wrap hero-grid">
+        <div>
+          <h1 class="ld-title">${words}</h1>
+          <p class="ld-lead">${esc(tx(h, 'sub'))}</p>
+          <div class="ld-cta">
+            <button class="btn primary lg" data-action="go-signup">${esc(tx(h, 'cta1'))}</button>
+            <button class="btn glass lg" data-action="scroll" data-id="plans">${esc(tx(h, 'cta2'))}</button>
+          </div>
         </div>
+        <div class="ld-stage" aria-hidden="true"><div class="ld-float">
+          <div class="fchip c2"><i>✨</i>${t('mk_ai')}</div>
+          <div class="fchip c1"><i>✓</i>${t('mk_done')}</div>
+          <div class="ld-mock">
+            <div class="mk-top"><i></i><i></i><i></i><u></u></div>
+            <div class="mk-stats">
+              <div style="--c:var(--brand)"><b class="cnt" data-raw="12">${(12).toLocaleString(loc())}</b><u></u></div>
+              <div style="--c:var(--sec)"><b class="cnt" data-raw="48">${(48).toLocaleString(loc())}</b><u></u></div>
+              <div style="--c:var(--ok)"><b class="cnt" data-raw="7">${(7).toLocaleString(loc())}</b><u></u></div>
+            </div>
+            <div class="mk-board">
+              <div class="mk-col"><h5>${t('st_todo')}</h5><div class="mk-slot"><div class="mk-mv"><span></span><u></u><u class="s"></u><b>✓</b></div></div><div class="mk-card" style="--c:var(--acc)"><span></span><u></u></div></div>
+              <div class="mk-col"><h5>${t('st_doing')}</h5><div class="mk-slot"></div><div class="mk-card" style="--c:var(--brand)"><span></span><u></u><u class="s"></u></div></div>
+              <div class="mk-col"><h5>${t('st_done')}</h5><div class="mk-slot"></div><div class="mk-card" style="--c:var(--ok)"><span></span><u></u></div></div>
+            </div>
+            <div class="mk-bars">${bars}</div>
+          </div>
+        </div></div>
       </div>
-      <div class="ld-mock" aria-hidden="true">
-        <div class="mk-top"><i></i><i></i><i></i></div>
-        <div class="mk-stats">
-          <div style="--c:var(--brand)"><b>12</b><u></u></div><div style="--c:var(--sec)"><b>48</b><u></u></div><div style="--c:var(--ok)"><b>7</b><u></u></div>
-        </div>
-        <div class="mk-board">
-          ${[['--brand', '--sec'], ['--acc', '--brand'], ['--ok', '--sec']].map(col => `<div class="mk-col">${col.map(cc => `<div class="mk-card" style="--c:var(${cc})"><span></span><u></u><u class="s"></u></div>`).join('')}</div>`).join('')}
-        </div>
-      </div>
-    </div></section>
+    </section>
+
+    <section class="ld-marq" aria-hidden="true">
+      <p>${t('ld_platforms')}</p>
+      <div class="mq"><div class="trk">${pf}${pf}</div></div>
+    </section>
+
+    ${stats ? `<section class="ld-stats"><div class="ld-wrap stats-grid">${stats}</div></section>` : ''}
 
     <section class="ld-sec alt"><div class="ld-wrap narrow">
-      <h2>${esc(tx(ab, 'title'))}</h2>
-      <p class="ld-about">${esc(tx(ab, 'text'))}</p>
+      <h2 class="rv">${esc(tx(ab, 'title'))}</h2>
+      <p class="ld-about rv slide" style="--i:1">${esc(tx(ab, 'text'))}</p>
     </div></section>
 
     <section class="ld-sec" id="sec-features"><div class="ld-wrap">
@@ -275,7 +375,8 @@ function renderLanding() {
     </div></section>
 
     <section class="ld-band"><div class="ld-wrap">
-      <h2>${esc(tx(s.cta, 'title'))}</h2><p>${esc(tx(s.cta, 'sub'))}</p>
+      <i></i><i></i><i></i>
+      <h2 class="rv">${esc(tx(s.cta, 'title'))}</h2><p class="rv" style="--i:1">${esc(tx(s.cta, 'sub'))}</p>
       <button class="btn lg light" data-action="go-signup">${esc(tx(s.cta, 'btn'))}</button>
     </div></section>
 
@@ -286,12 +387,13 @@ function renderLanding() {
       <p class="foot-copy">© ${new Date().getFullYear().toLocaleString('en-US', { useGrouping: false })} ${esc(s.brand)} — ${t('rights')}</p>
     </div></footer>
     ${wa ? `<a class="wa-float" href="https://wa.me/${wa}" target="_blank" rel="noopener" aria-label="WhatsApp">💬</a>` : ''}`;
-}
+
+  initLandingFx();}
 
 /* ---------------- لوحة الأدمن: محرر الموقع ---------------- */
 let draft = null, siteTab = CLOUD ? 'users' : 'general';
-const TABS = ['users', 'general', 'hero', 'features', 'steps', 'plans', 'faq', 'contact'];
-const TAB_LABEL = { users: 'المستخدمون والاشتراكات', general: 'الهوية والألوان', hero: 'الواجهة والعناوين', features: 'المميزات', steps: 'الخطوات', plans: 'الباقات والأسعار', faq: 'الأسئلة الشائعة', contact: 'التواصل والفوتر' };
+const TABS = ['users', 'general', 'hero', 'stats', 'features', 'steps', 'plans', 'faq', 'contact'];
+const TAB_LABEL = { users: 'المستخدمون والاشتراكات', general: 'الهوية والألوان', hero: 'الواجهة والعناوين', stats: 'الأرقام', features: 'المميزات', steps: 'الخطوات', plans: 'الباقات والأسعار', faq: 'الأسئلة الشائعة', contact: 'التواصل والفوتر' };
 const bi = (k, l, t = 'text', extra = {}) => [{ k: k + '_ar', l: l + ' (عربي)', t, ...extra }, { k: k + '_en', l: l + ' (English)', t, ...extra }];
 
 const EDIT = {
@@ -343,6 +445,7 @@ const EDIT = {
 };
 const LISTS = {
   features: { add: 'ميزة جديدة', label: i => i.title_ar, fields: [{ k: 'icon', l: 'الأيقونة (إيموجي)', t: 'text', full: 1 }, ...bi('title', 'العنوان'), ...bi('text', 'الوصف', 'area')] },
+  stats: { add: 'رقم جديد', label: i => `${i.num} — ${i.label_ar}`, fields: [{ k: 'num', l: 'الرقم (ممكن تكتب +500 أو 98%)', t: 'text', full: 1 }, ...bi('label', 'الوصف')] },
   steps: { add: 'خطوة جديدة', label: i => i.title_ar, fields: [...bi('title', 'العنوان'), ...bi('text', 'الوصف', 'area')] },
   plans: {
     add: 'باقة جديدة', label: i => `${i.name_ar} — ${Number(i.price || 0)} ج.م`,
@@ -353,6 +456,7 @@ const LISTS = {
 };
 const NEW_ITEM = {
   features: () => ({ icon: '⭐', title_ar: 'ميزة جديدة', title_en: 'New feature', text_ar: '', text_en: '' }),
+  stats: () => ({ num: '100', label_ar: 'وصف الرقم', label_en: 'Stat label' }),
   steps: () => ({ title_ar: 'خطوة جديدة', title_en: 'New step', text_ar: '', text_en: '' }),
   plans: () => ({ id: uid(), name_ar: 'باقة جديدة', name_en: 'New plan', price: 0, max_clients: 10, popular: false, desc_ar: '', desc_en: '', features_ar: '', features_en: '', cta_ar: 'اشترك الآن', cta_en: 'Subscribe' }),
   faq: () => ({ q_ar: 'سؤال جديد', q_en: 'New question', a_ar: '', a_en: '' })
