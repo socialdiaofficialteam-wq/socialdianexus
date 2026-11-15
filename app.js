@@ -44,6 +44,9 @@ const T = {
     nav_site: 'إدارة الموقع', nav_home: 'الصفحة الرئيسية', ld_features: 'المميزات', ld_how: 'كيف يعمل', ld_plans: 'الباقات', ld_faq: 'الأسئلة', ld_contact: 'تواصل',
     open_app: 'لوحة التحكم', per_month: 'شهرياً', popular: 'الأكثر طلباً', subscribe: 'اشترك الآن', wa_msg: 'أرغب في الاشتراك في باقة {plan} على {brand}',
     whatsapp: 'واتساب',
+    good_am: 'صباح الخير', good_pm: 'مساء الخير', late_n: 'عندك {n} مهام متأخرة محتاجة متابعة', all_good: 'مفيش مهام متأخرة، كمّل 👏',
+    task_status: 'حالة المهام', post_status: 'حالة البوستات', done_rate: 'نسبة الإنجاز', no_tasks: 'لسه مفيش مهام', no_posts: 'لسه مفيش بوستات',
+    mk_done: 'تم اعتماد البوست', mk_ai: 'كابشن جاهز في ثواني', ld_platforms: 'نظّم محتوى كل منصاتك في تقويم واحد',
     limit_reached: 'وصلت للحد الأقصى من العملاء في باقتك. تواصل معنا للترقية.', suspended_err: 'الحساب موقوف حالياً.',
     plan_label: 'الباقة', no_plan: 'بدون اشتراك', role_admin: 'أدمن', unlimited: 'غير محدود', clients_usage: 'العملاء',
     up_to_clients: 'حتى {n} عميل', unlimited_clients: 'عملاء غير محدودين',
@@ -73,6 +76,9 @@ const T = {
     nav_site: 'Site admin', nav_home: 'Home page', ld_features: 'Features', ld_how: 'How it works', ld_plans: 'Plans', ld_faq: 'FAQ', ld_contact: 'Contact',
     open_app: 'Dashboard', per_month: 'month', popular: 'Most popular', subscribe: 'Subscribe', wa_msg: 'I would like to subscribe to the {plan} plan on {brand}',
     whatsapp: 'WhatsApp',
+    good_am: 'Good morning', good_pm: 'Good evening', late_n: 'You have {n} overdue tasks to follow up', all_good: 'Nothing overdue, keep going 👏',
+    task_status: 'Task status', post_status: 'Post status', done_rate: 'Completion rate', no_tasks: 'No tasks yet', no_posts: 'No posts yet',
+    mk_done: 'Post approved', mk_ai: 'Caption ready in seconds', ld_platforms: 'Plan content for every platform in one calendar',
     limit_reached: 'You reached the client limit of your plan. Contact us to upgrade.', suspended_err: 'This account is suspended.',
     plan_label: 'Plan', no_plan: 'No subscription', role_admin: 'Admin', unlimited: 'Unlimited', clients_usage: 'Clients',
     up_to_clients: 'Up to {n} clients', unlimited_clients: 'Unlimited clients',
@@ -89,7 +95,7 @@ let SUB = null; // اشتراك المستخدم الحالي (من جدول sub
 let isAdmin = !CLOUD; // في الوضع المحلي (تجربة) صاحب الجهاز هو الأدمن
 let synced = { clients: {}, tasks: {}, posts: {} };
 let syncChain = Promise.resolve();
-let route = 'dashboard';
+let route = 'dashboard', lastView = '';
 let cal = { y: new Date().getFullYear(), m: new Date().getMonth() };
 let AI = { tool: 'caption', client: '', tone: '', topic: '', lang: 'ar', out: '', note: '', busy: false };
 let modalDelete = null;
@@ -254,7 +260,7 @@ const client = id => S.clients.find(c => c.id === id);
 
 /* ---------------- مكونات صغيرة ---------------- */
 const chip = id => { const c = client(id); return c ? `<span class="chip" style="--c:${c.color}">${esc(c.name)}</span>` : ''; };
-const stat = (ic, label, val) => `<div class="card stat"><div class="ic">${ic}</div><div><b>${esc(val)}</b><span>${esc(label)}</span></div></div>`;
+const stat = (ic, label, val, c = '--brand', n = null, suf = '') => `<div class="card stat" style="--c:var(${c})"><div class="ic">${ic}</div><div><b${n === null ? '' : ` data-n="${n}" data-suf="${esc(suf)}"`}>${esc(val)}</b><span>${esc(label)}</span></div></div>`;
 const empty = () => `<div class="empty">${t('empty')}</div>`;
 const fld = (name, label, val = '', type = 'text', extra = '') => `<label class="f ${extra.includes('full') ? 'full' : ''}">${label}<input name="${name}" type="${type}" value="${esc(val)}" ${extra.replace('full', '')}></label>`;
 const area = (name, label, val = '') => `<label class="f full">${label}<textarea name="${name}">${esc(val)}</textarea></label>`;
@@ -270,8 +276,25 @@ const VIEWS = {
     const pm = S.posts.filter(p => p.date.startsWith(today.slice(0, 7))).length;
     const tasks = [...open].sort((a, b) => (a.due || '9999') > (b.due || '9999') ? 1 : -1).slice(0, 5);
     const posts = S.posts.filter(p => p.date >= today).sort((a, b) => a.date > b.date ? 1 : -1).slice(0, 5);
-    return `<p style="color:var(--mut);margin-top:0">${t('hi')}</p>
-      <div class="stats">${stat('👥', t('stat_clients'), S.clients.length)}${stat('💰', t('stat_mrr'), money(mrr))}${stat('✅', t('stat_open'), open.length)}${stat('📅', t('stat_posts'), pm)}</div>
+    const total = S.tasks.length, done = total - open.length, pct = total ? Math.round(done / total * 100) : 0;
+    const late = open.filter(x => x.due && x.due < today).length;
+    const name = user && user.email ? user.email.split('@')[0] : '';
+    const greet = new Date().getHours() < 12 ? t('good_am') : t('good_pm');
+    const dateStr = new Date().toLocaleDateString(loc(), { weekday: 'long', day: 'numeric', month: 'long' });
+    const seg = (items) => { const n = items.reduce((a, x) => a + x[1], 0); return n ? `<div class="seg">${items.map(([k, v, c]) => v ? `<i style="--v:${v};--c:${c}" title="${esc(k)}: ${v}"></i>` : '').join('')}</div>` : ''; };
+    const leg = items => `<div class="leg">${items.map(([k, v, c]) => `<span><i style="background:${c}"></i>${esc(k)} <b>${v.toLocaleString(loc())}</b></span>`).join('')}</div>`;
+    const tItems = ['todo', 'doing', 'done'].map((k, i) => [t('st_' + k), S.tasks.filter(x => x.status === k).length, ['var(--acc)', 'var(--sec)', 'var(--ok)'][i]]);
+    const pItems = ['draft', 'pending', 'approved', 'published'].map((k, i) => [t('ps_' + k), S.posts.filter(x => x.status === k).length, ['#9ca3af', 'var(--acc)', 'var(--sec)', 'var(--ok)'][i]]);
+    return `<section class="dash-hero">
+        <div class="aurora" aria-hidden="true"><i></i><i></i></div>
+        <div class="dh-text"><small>${esc(dateStr)}</small><h2>${greet}${name ? '، ' + esc(name) : ''} <span class="wave">👋</span></h2><p>${late ? t('late_n').replace('{n}', late.toLocaleString(loc())) : t('all_good')}</p></div>
+        <div class="dh-acts"><button class="btn primary" data-action="add-client">＋ ${t('add_client')}</button><button class="btn glass" data-action="add-task">＋ ${t('add_task')}</button><button class="btn glass" data-action="add-post">＋ ${t('add_post')}</button></div>
+      </section>
+      <div class="stats">${stat('👥', t('stat_clients'), S.clients.length.toLocaleString(loc()), '--brand', S.clients.length)}${stat('💰', t('stat_mrr'), money(mrr), '--ok', mrr, ' ' + t('cur'))}${stat('✅', t('stat_open'), open.length.toLocaleString(loc()), '--sec', open.length)}${stat('📅', t('stat_posts'), pm.toLocaleString(loc()), '--acc', pm)}</div>
+      <div class="two ovw">
+        <section class="card"><h3>${t('task_status')}</h3>${total ? `<div class="ovw-body"><div class="ring" style="--p:${pct}"><b><bdi dir="ltr" data-n="${pct}" data-suf="%">${pct.toLocaleString(loc())}%</bdi></b><small>${t('done_rate')}</small></div><div class="ovw-side">${seg(tItems)}${leg(tItems)}</div></div>` : `<div class="empty">${t('no_tasks')}</div>`}</section>
+        <section class="card"><h3>${t('post_status')}</h3>${S.posts.length ? `<div class="ovw-side wide">${seg(pItems)}${leg(pItems)}</div>` : `<div class="empty">${t('no_posts')}</div>`}</section>
+      </div>
       <div class="two">
         <section class="card"><h3>${t('upcoming_tasks')}</h3>${tasks.length ? tasks.map(x => `<div class="row"><div class="grow"><b>${esc(x.title)}</b><br><small class="${x.due && x.due < today ? 'late' : ''}">${x.due ? '📆 ' + fmtDate(x.due) : ''}</small></div>${chip(x.client)}</div>`).join('') : empty()}</section>
         <section class="card"><h3>${t('upcoming_posts')}</h3>${posts.length ? posts.map(p => `<div class="row"><div class="grow"><b>${esc(p.platform)}</b> · <small>${fmtDate(p.date)}</small><br><small>${esc((p.caption || '').slice(0, 50))}</small></div>${chip(p.client)}</div>`).join('') : empty()}</section>
@@ -392,7 +415,7 @@ function render() {
   if (isSuspended()) { show('auth'); renderBlocked(); document.title = SITE.brand; return; }
   show('app');
   const foot = user ? `${planLine()}<div class="who" dir="ltr">${esc(user.email)}</div><button class="btn sm ghost" data-action="logout">${t('logout')}</button>` : t('foot');
-  const nav = NAV.filter(n => n[2] !== 'admin' || isAdmin).map(([k, ic]) => `<a href="#${k}" class="${k === r ? 'on' : ''}"><span>${ic}</span>${t('nav_' + k)}</a>`).join('');
+  const nav = NAV.filter(n => n[2] !== 'admin' || isAdmin).map(([k, ic], i) => `<a href="#${k}" style="--i:${i}" class="${k === r ? 'on' : ''}"><span>${ic}</span>${t('nav_' + k)}</a>`).join('');
   $('#side').innerHTML = `<div class="logo">${brandLockup()}</div><nav class="nav">${nav}</nav><div class="side-foot">${foot}</div>`;
   $('#title').textContent = t('nav_' + r);
   $('#langbtn').textContent = S.lang === 'ar' ? 'EN' : 'عربي';
@@ -400,7 +423,30 @@ function render() {
   $('#modal-ok').textContent = t('save');
   $('#modal-del').textContent = t('del');
   $('#view').innerHTML = VIEWS[r]();
+  const vw = $('#view');
+  if (lastView !== r && vw.classList) {
+    vw.classList.remove('enter'); void vw.offsetWidth; vw.classList.add('enter');
+    if (vw.querySelectorAll) {
+      Array.from(vw.querySelectorAll('.row,.task,.day,.client,.col,.leg span')).forEach((el, i) => el.style.setProperty('--i', i));
+      Array.from(vw.querySelectorAll('[data-n]')).forEach(animateNum);
+    }
+    if (!lastView) { const sd = $('#side'); if (sd.classList) { sd.classList.add('intro'); setTimeout(() => sd.classList.remove('intro'), 1200); } }
+  }
+  lastView = r;
   document.title = t('nav_' + r) + ' · ' + SITE.brand;
+}
+
+// عدّاد للأرقام: بيعدّ من صفر للرقم الحقيقي مرة واحدة عند دخول الصفحة
+function animateNum(el) {
+  const to = Number(el.dataset.n), suf = el.dataset.suf || '';
+  if (!isFinite(to) || to <= 0 || (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches)) return;
+  const t0 = performance.now(), dur = 1100;
+  const f = now => {
+    const k = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - k, 3);
+    el.textContent = Math.round(to * e).toLocaleString(loc()) + suf;
+    if (k < 1) requestAnimationFrame(f);
+  };
+  requestAnimationFrame(f);
 }
 
 /* ---------------- نافذة الإدخال ---------------- */
