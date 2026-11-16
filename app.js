@@ -9,7 +9,7 @@ const LANG_KEY = 'nexus_lang';
 const CFG = (typeof window !== 'undefined' && window.NEXUS_CONFIG) || {};
 const CLOUD = !!(CFG.supabaseUrl && CFG.supabaseAnonKey && typeof window !== 'undefined' && window.supabase);
 if (CFG.supabaseUrl && !CLOUD) console.warn('Supabase config found but the supabase-js library did not load; running in local mode.');
-const TABLES = ['clients', 'tasks', 'posts'];
+const TABLES = ['clients', 'tasks', 'posts', 'profiles'];
 // ألوان العملاء: من ألوان لوجو Socialdia Nexus
 const COLORS = ['#f40268', '#05c7ea', '#f59e0b', '#2e9a02', '#f01ddc', '#7c3aed', '#ff6b35'];
 const PLATFORMS = ['Instagram', 'Facebook', 'TikTok', 'LinkedIn', 'X', 'YouTube'];
@@ -33,7 +33,7 @@ const T = {
     ai_title: 'مساعد المحتوى الذكي', ai_tool: 'نوع المحتوى', tool_caption: 'كابشن سوشيال', tool_ad: 'إعلان مدفوع', tool_script: 'سكريبت فيديو',
     tool_ideas: 'أفكار محتوى', tool_brief: 'بريف حملة', ai_client: 'العميل', ai_tone: 'نبرة البراند', ai_tone_ph: 'مثال: ودودة، شبابية، فخمة',
     ai_topic: 'الموضوع / المنتج', ai_topic_ph: 'مثال: عرض الصيف على الوجبات العائلية', ai_lang: 'لغة الناتج', lang_ar: 'عربي (مصري)', lang_en: 'English',
-    ai_gen: '✨ ولّد', ai_busy: 'جاري التوليد...', ai_out: 'الناتج', ai_copy: 'نسخ', ai_save: 'احفظ كبوست في التقويم',
+    ai_gen: 'ولّد', ai_busy: 'جاري التوليد...', ai_out: 'الناتج', ai_copy: 'نسخ', ai_save: 'احفظ كبوست في التقويم',
     ai_demo: 'ده ناتج تجريبي من قوالب جاهزة. أضف مفتاح AI على Vercel عشان تاخد نتائج حقيقية.', ai_need_topic: 'اكتب الموضوع الأول', copied: 'تم النسخ ✓',
     set_data: 'بياناتك', set_note: 'البيانات محفوظة في متصفحك فقط. لتشغيلها فعلياً مع عملاء وفرق، اربطها بقاعدة بيانات (Supabase).',
     export: 'تصدير نسخة احتياطية', import: 'استيراد نسخة', clear: 'مسح كل البيانات', cleared: 'تم المسح', imported: 'تم الاستيراد ✓', bad_file: 'ملف غير صالح',
@@ -44,8 +44,19 @@ const T = {
     nav_site: 'إدارة الموقع', nav_home: 'الصفحة الرئيسية', ld_features: 'المميزات', ld_how: 'كيف يعمل', ld_plans: 'الباقات', ld_faq: 'الأسئلة', ld_contact: 'تواصل',
     open_app: 'لوحة التحكم', per_month: 'شهرياً', popular: 'الأكثر طلباً', subscribe: 'اشترك الآن', wa_msg: 'أرغب في الاشتراك في باقة {plan} على {brand}',
     whatsapp: 'واتساب',
-    good_am: 'صباح الخير', good_pm: 'مساء الخير', late_n: 'عندك {n} مهام متأخرة محتاجة متابعة', all_good: 'مفيش مهام متأخرة، كمّل 👏',
+    good_am: 'صباح الخير', good_pm: 'مساء الخير', late_n: 'عندك {n} مهام متأخرة محتاجة متابعة', all_good: 'مفيش مهام متأخرة، كمّل',
     task_status: 'حالة المهام', post_status: 'حالة البوستات', done_rate: 'نسبة الإنجاز', no_tasks: 'لسه مفيش مهام', no_posts: 'لسه مفيش بوستات',
+    
+    
+    
+    
+    
+    
+    ps_scheduled: 'مجدول', ps_publishing: 'جاري النشر', ps_failed: 'فشل',
+    
+    
+    
+    wait_sync: 'جاري الحفظ…',
     mk_done: 'تم اعتماد البوست', mk_ai: 'كابشن جاهز في ثواني', ld_platforms: 'نظّم محتوى كل منصاتك في تقويم واحد',
     limit_reached: 'وصلت للحد الأقصى من العملاء في باقتك. تواصل معنا للترقية.', suspended_err: 'الحساب موقوف حالياً.',
     plan_label: 'الباقة', no_plan: 'بدون اشتراك', role_admin: 'أدمن', unlimited: 'غير محدود', clients_usage: 'العملاء',
@@ -65,7 +76,7 @@ const T = {
     ai_title: 'Smart content assistant', ai_tool: 'Content type', tool_caption: 'Social caption', tool_ad: 'Paid ad', tool_script: 'Video script',
     tool_ideas: 'Content ideas', tool_brief: 'Campaign brief', ai_client: 'Client', ai_tone: 'Brand tone', ai_tone_ph: 'e.g. friendly, youthful, premium',
     ai_topic: 'Topic / product', ai_topic_ph: 'e.g. Summer offer on family meals', ai_lang: 'Output language', lang_ar: 'Arabic (Egyptian)', lang_en: 'English',
-    ai_gen: '✨ Generate', ai_busy: 'Generating...', ai_out: 'Result', ai_copy: 'Copy', ai_save: 'Save as post in calendar',
+    ai_gen: 'Generate', ai_busy: 'Generating...', ai_out: 'Result', ai_copy: 'Copy', ai_save: 'Save as post in calendar',
     ai_demo: 'Demo output from built-in templates. Add an AI key on Vercel for real results.', ai_need_topic: 'Enter a topic first', copied: 'Copied ✓',
     set_data: 'Your data', set_note: 'Data is stored in your browser only. To run it with real clients and teams, connect a database (Supabase).',
     export: 'Export backup', import: 'Import backup', clear: 'Clear all data', cleared: 'Cleared', imported: 'Imported ✓', bad_file: 'Invalid file',
@@ -76,8 +87,19 @@ const T = {
     nav_site: 'Site admin', nav_home: 'Home page', ld_features: 'Features', ld_how: 'How it works', ld_plans: 'Plans', ld_faq: 'FAQ', ld_contact: 'Contact',
     open_app: 'Dashboard', per_month: 'month', popular: 'Most popular', subscribe: 'Subscribe', wa_msg: 'I would like to subscribe to the {plan} plan on {brand}',
     whatsapp: 'WhatsApp',
-    good_am: 'Good morning', good_pm: 'Good evening', late_n: 'You have {n} overdue tasks to follow up', all_good: 'Nothing overdue, keep going 👏',
+    good_am: 'Good morning', good_pm: 'Good evening', late_n: 'You have {n} overdue tasks to follow up', all_good: 'Nothing overdue, keep going',
     task_status: 'Task status', post_status: 'Post status', done_rate: 'Completion rate', no_tasks: 'No tasks yet', no_posts: 'No posts yet',
+    
+    
+    
+    
+    
+    
+    ps_scheduled: 'Scheduled', ps_publishing: 'Publishing', ps_failed: 'Failed',
+    
+    
+    
+    wait_sync: 'Saving…',
     mk_done: 'Post approved', mk_ai: 'Caption ready in seconds', ld_platforms: 'Plan content for every platform in one calendar',
     limit_reached: 'You reached the client limit of your plan. Contact us to upgrade.', suspended_err: 'This account is suspended.',
     plan_label: 'Plan', no_plan: 'No subscription', role_admin: 'Admin', unlimited: 'Unlimited', clients_usage: 'Clients',
@@ -88,12 +110,12 @@ const T = {
 
 /* ---------------- الحالة ---------------- */
 const savedLang = () => { try { return localStorage.getItem(LANG_KEY) === 'en' ? 'en' : 'ar'; } catch (e) { return 'ar'; } };
-const emptyState = lang => ({ lang, clients: [], tasks: [], posts: [] });
+const emptyState = lang => ({ lang, clients: [], tasks: [], posts: [], profiles: [] });
 let S = CLOUD ? emptyState(savedLang()) : load();
 let sb = null, user = null, booting = CLOUD, authMode = 'login';
 let SUB = null; // اشتراك المستخدم الحالي (من جدول subscriptions)
 let isAdmin = !CLOUD; // في الوضع المحلي (تجربة) صاحب الجهاز هو الأدمن
-let synced = { clients: {}, tasks: {}, posts: {} };
+let synced = { clients: {}, tasks: {}, posts: {}, profiles: {} };
 let syncChain = Promise.resolve();
 let route = 'dashboard', lastView = '';
 let cal = { y: new Date().getFullYear(), m: new Date().getMonth() };
@@ -110,7 +132,7 @@ function seed() {
     { id: uid(), name: 'براند ستايل', industry: 'أزياء', fee: 5500, contact: '0100 000 0003', color: COLORS[0] }
   ];
   return {
-    lang: 'ar', clients: c,
+    lang: 'ar', profiles: [], clients: c,
     tasks: [
       { id: uid(), title: 'تصميم بوستات أسبوع رمضان', client: c[0].id, due: inDays(2), priority: 'high', status: 'doing' },
       { id: uid(), title: 'سكريبت ريل عن الخدمات', client: c[1].id, due: inDays(4), priority: 'med', status: 'todo' },
@@ -126,7 +148,7 @@ function seed() {
 }
 function load() {
   for (const k of [KEY, OLD_KEY]) {
-    try { const d = JSON.parse(localStorage.getItem(k)); if (d && Array.isArray(d.clients)) return d; } catch (e) {}
+    try { const d = JSON.parse(localStorage.getItem(k)); if (d && Array.isArray(d.clients)) { if (!Array.isArray(d.profiles)) d.profiles = []; return d; } } catch (e) {}
   }
   return seed();
 }
@@ -173,7 +195,7 @@ function queueSync() {
 }
 async function pullCloud() {
   const out = emptyState(S.lang);
-  const map = { clients: {}, tasks: {}, posts: {} };
+  const map = { clients: {}, tasks: {}, posts: {}, profiles: {} };
   for (const tb of TABLES) {
     const { data, error } = await sb.from(tb).select('id,data').eq('owner', user.id).limit(5000);
     if (error) throw error;
@@ -186,7 +208,7 @@ async function pullCloud() {
     SUB = r.error ? null : r.data;
   } catch (e) { SUB = null; }
 }
-function resetState() { SUB = null; S = emptyState(S.lang); synced = { clients: {}, tasks: {}, posts: {} }; }
+function resetState() { SUB = null; S = emptyState(S.lang); synced = { clients: {}, tasks: {}, posts: {}, profiles: {} }; }
 /* ---------------- الاشتراك والحدود ---------------- */
 const subActive = () => !!SUB && SUB.status === 'active' && (!SUB.expires_at || new Date(SUB.expires_at) > new Date());
 const isSuspended = () => CLOUD && !isAdmin && !!SUB && SUB.status === 'suspended';
@@ -278,7 +300,8 @@ const VIEWS = {
     const posts = S.posts.filter(p => p.date >= today).sort((a, b) => a.date > b.date ? 1 : -1).slice(0, 5);
     const total = S.tasks.length, done = total - open.length, pct = total ? Math.round(done / total * 100) : 0;
     const late = open.filter(x => x.due && x.due < today).length;
-    const name = user && user.email ? user.email.split('@')[0] : '';
+    const co = (typeof me === 'function' ? me().company : '') || '';
+    const name = co.trim() || (user && user.email ? user.email.split('@')[0] : '');
     const greet = new Date().getHours() < 12 ? t('good_am') : t('good_pm');
     const dateStr = new Date().toLocaleDateString(loc(), { weekday: 'long', day: 'numeric', month: 'long' });
     const seg = (items) => { const n = items.reduce((a, x) => a + x[1], 0); return n ? `<div class="seg">${items.map(([k, v, c]) => v ? `<i style="--v:${v};--c:${c}" title="${esc(k)}: ${v}"></i>` : '').join('')}</div>` : ''; };
@@ -287,17 +310,17 @@ const VIEWS = {
     const pItems = ['draft', 'pending', 'approved', 'published'].map((k, i) => [t('ps_' + k), S.posts.filter(x => x.status === k).length, ['#9ca3af', 'var(--acc)', 'var(--sec)', 'var(--ok)'][i]]);
     return `<section class="dash-hero">
         <div class="aurora" aria-hidden="true"><i></i><i></i></div>
-        <div class="dh-text"><small>${esc(dateStr)}</small><h2>${greet}${name ? '، ' + esc(name) : ''} <span class="wave">👋</span></h2><p>${late ? t('late_n').replace('{n}', late.toLocaleString(loc())) : t('all_good')}</p></div>
-        <div class="dh-acts"><button class="btn primary" data-action="add-client">＋ ${t('add_client')}</button><button class="btn glass" data-action="add-task">＋ ${t('add_task')}</button><button class="btn glass" data-action="add-post">＋ ${t('add_post')}</button></div>
+        <div class="dh-text"><small>${esc(dateStr)}</small><h2>${greet}${name ? '، ' + esc(name) : ''}</h2><p>${late ? t('late_n').replace('{n}', late.toLocaleString(loc())) : t('all_good')}</p></div>
+        <div class="dh-acts"><button class="btn primary" data-action="add-client">${ic('plus')} ${t('add_client')}</button><button class="btn glass" data-action="add-task">${ic('plus')} ${t('add_task')}</button><button class="btn glass" data-action="add-post">${ic('plus')} ${t('add_post')}</button></div>
       </section>
-      <div class="stats">${stat('👥', t('stat_clients'), S.clients.length.toLocaleString(loc()), '--brand', S.clients.length)}${stat('💰', t('stat_mrr'), money(mrr), '--ok', mrr, ' ' + t('cur'))}${stat('✅', t('stat_open'), open.length.toLocaleString(loc()), '--sec', open.length)}${stat('📅', t('stat_posts'), pm.toLocaleString(loc()), '--acc', pm)}</div>
+      <div class="stats">${stat(ic('users'), t('stat_clients'), S.clients.length.toLocaleString(loc()), '--brand', S.clients.length)}${stat(ic('cash'), t('stat_mrr'), money(mrr), '--ok', mrr, ' ' + t('cur'))}${stat(ic('tasks'), t('stat_open'), open.length.toLocaleString(loc()), '--sec', open.length)}${stat(ic('calendar'), t('stat_posts'), pm.toLocaleString(loc()), '--acc', pm)}</div>
       <div class="two ovw">
         <section class="card"><h3>${t('task_status')}</h3>${total ? `<div class="ovw-body"><div class="ring" style="--p:${pct}"><b><bdi dir="ltr" data-n="${pct}" data-suf="%">${pct.toLocaleString(loc())}%</bdi></b><small>${t('done_rate')}</small></div><div class="ovw-side">${seg(tItems)}${leg(tItems)}</div></div>` : `<div class="empty">${t('no_tasks')}</div>`}</section>
         <section class="card"><h3>${t('post_status')}</h3>${S.posts.length ? `<div class="ovw-side wide">${seg(pItems)}${leg(pItems)}</div>` : `<div class="empty">${t('no_posts')}</div>`}</section>
       </div>
       <div class="two">
-        <section class="card"><h3>${t('upcoming_tasks')}</h3>${tasks.length ? tasks.map(x => `<div class="row"><div class="grow"><b>${esc(x.title)}</b><br><small class="${x.due && x.due < today ? 'late' : ''}">${x.due ? '📆 ' + fmtDate(x.due) : ''}</small></div>${chip(x.client)}</div>`).join('') : empty()}</section>
-        <section class="card"><h3>${t('upcoming_posts')}</h3>${posts.length ? posts.map(p => `<div class="row"><div class="grow"><b>${esc(p.platform)}</b> · <small>${fmtDate(p.date)}</small><br><small>${esc((p.caption || '').slice(0, 50))}</small></div>${chip(p.client)}</div>`).join('') : empty()}</section>
+        <section class="card"><h3>${t('upcoming_tasks')}</h3>${tasks.length ? tasks.map(x => `<div class="row"><div class="grow"><b>${esc(x.title)}</b><br><small class="${x.due && x.due < today ? 'late' : ''}">${x.due ? ic('clock') + ' ' + fmtDate(x.due) : ''}</small></div>${chip(x.client)}</div>`).join('') : empty()}</section>
+        <section class="card"><h3>${t('upcoming_posts')}</h3>${posts.length ? posts.map(p => `<div class="row">${typeof platBadge === 'function' ? platBadge(p.platform) : ''}<div class="grow"><b>${esc(p.platform)}</b> · <small>${fmtDate(p.date)}</small><br><small>${esc((p.caption || '').slice(0, 50))}</small></div>${chip(p.client)}</div>`).join('') : empty()}</section>
       </div>`;
   },
 
@@ -308,11 +331,11 @@ const VIEWS = {
       return `<div class="card client" style="--c:${c.color}">
         <div class="head"><div class="avatar">${esc(c.name.trim().charAt(0).toUpperCase())}</div><div><b>${esc(c.name)}</b><br><small style="color:var(--mut)">${esc(c.industry)}</small></div></div>
         <div class="fee">${money(c.fee)}</div>
-        <div class="meta"><span>✅ ${tn} ${t('tasks_n')}</span><span>📅 ${pn} ${t('posts_n')}</span></div>
-        <div class="meta"><span>📞 <bdi dir="ltr">${esc(c.contact || '—')}</bdi></span></div>
+        <div class="meta"><span>${ic('tasks')} ${tn} ${t('tasks_n')}</span><span>${ic('calendar')} ${pn} ${t('posts_n')}</span></div>
+        <div class="meta"><span>${ic('call')} <bdi dir="ltr">${esc(c.contact || '—')}</bdi></span></div>
         <div class="acts"><button class="btn sm" data-action="edit-client" data-id="${c.id}">${t('edit')}</button></div></div>`;
     }).join('');
-    return `<div class="bar"><button class="btn primary" data-action="add-client">＋ ${t('add_client')}</button></div>
+    return `<div class="bar"><button class="btn primary" data-action="add-client">${ic('plus')} ${t('add_client')}</button></div>
       ${S.clients.length ? `<div class="grid">${cards}</div>` : `<div class="card">${empty()}</div>`}`;
   },
 
@@ -320,13 +343,13 @@ const VIEWS = {
     const today = dstr(new Date());
     const card = x => `<div class="task" draggable="true" data-id="${x.id}">
       <div class="t-title">${esc(x.title)}</div>
-      <div class="t-meta">${chip(x.client)}<span class="pri ${x.priority}">${t('pri_' + x.priority)}</span>${x.due ? `<span class="${x.due < today && x.status !== 'done' ? 'late' : ''}">📆 ${fmtDate(x.due)}</span>` : ''}</div>
+      <div class="t-meta">${chip(x.client)}<span class="pri ${x.priority}">${t('pri_' + x.priority)}</span>${x.due ? `<span class="${x.due < today && x.status !== 'done' ? 'late' : ''}">${ic('clock')} ${fmtDate(x.due)}</span>` : ''}</div>
       <div class="t-act">${x.status !== 'done' ? `<button class="btn sm" data-action="next-task" data-id="${x.id}">${t('next')}</button>` : ''}<button class="btn sm" data-action="edit-task" data-id="${x.id}">${t('edit')}</button></div></div>`;
     const cols = ['todo', 'doing', 'done'].map(c => {
       const list = S.tasks.filter(x => x.status === c);
       return `<div class="col"><h4>${t('st_' + c)} <span class="count">${list.length}</span></h4><div class="col-body" data-status="${c}">${list.map(card).join('')}</div></div>`;
     }).join('');
-    return `<div class="bar"><button class="btn primary" data-action="add-task">＋ ${t('add_task')}</button></div><div class="kanban">${cols}</div>`;
+    return `<div class="bar"><button class="btn primary" data-action="add-task">${ic('plus')} ${t('add_task')}</button></div><div class="kanban">${cols}</div>`;
   },
 
   calendar() {
@@ -343,12 +366,12 @@ const VIEWS = {
       const d = new Date(start); d.setDate(start.getDate() + i);
       const ds = dstr(d);
       const list = S.posts.filter(p => p.date === ds);
-      const chips = list.slice(0, 3).map(p => `<div class="post ${p.status}" style="--c:${client(p.client)?.color || '#999'}" data-action="edit-post" data-id="${p.id}" title="${esc(p.caption)}">${esc(p.platform)} · ${esc((p.caption || '').slice(0, 18))}</div>`).join('');
+      const chips = list.slice(0, 3).map(p => `<div class="post ${p.status}" style="--c:${client(p.client)?.color || '#999'}" data-action="edit-post" data-id="${p.id}" title="${esc(p.caption)}">${platIc(p.platform)} ${esc(p.platform)} · ${esc((p.caption || '').slice(0, 18))}</div>`).join('');
       cells += `<div class="day ${d.getMonth() !== cal.m ? 'out' : ''} ${ds === today ? 'today' : ''}" data-action="add-post" data-id="${ds}"><span class="n">${d.getDate()}</span>${chips}${list.length > 3 ? `<span class="more">+${list.length - 3}</span>` : ''}</div>`;
     }
     const title = new Date(cal.y, cal.m, 1).toLocaleDateString(loc(), { month: 'long', year: 'numeric' });
     const rtl = S.lang === 'ar';
-    return `<div class="cal-head"><button class="btn" data-action="prev-month">${rtl ? '›' : '‹'}</button><h2>${title}</h2><button class="btn" data-action="next-month">${rtl ? '‹' : '›'}</button><span class="spacer"></span><button class="btn primary" data-action="add-post" data-id="${today}">＋ ${t('add_post')}</button></div>
+    return `<div class="cal-head"><button class="btn" data-action="prev-month">${rtl ? '›' : '‹'}</button><h2>${title}</h2><button class="btn" data-action="next-month">${rtl ? '‹' : '›'}</button><span class="spacer"></span><button class="btn" data-action="go-content">${ic('layers')} ${t('nav_content')}</button><button class="btn primary" data-action="add-post" data-id="${today}">${ic('plus')} ${t('add_post')}</button></div>
       <div class="cal">${dows.map(d => `<div class="dow">${d}</div>`).join('')}${cells}</div>
       <div class="legend"><span class="post draft">${t('ps_draft')}</span><span class="post pending">${t('ps_pending')}</span><span class="post approved">${t('ps_approved')}</span><span class="post published">${t('ps_published')}</span></div>`;
   },
@@ -362,7 +385,7 @@ const VIEWS = {
         <label class="f">${t('ai_tone')}<input data-ai="tone" value="${esc(AI.tone)}" placeholder="${t('ai_tone_ph')}"></label>
         ${sel('', t('ai_lang'), [['ar', t('lang_ar')], ['en', t('lang_en')]], AI.lang).replace('<select name=""', '<select data-ai="lang"')}
         <label class="f full">${t('ai_topic')}<textarea data-ai="topic" placeholder="${t('ai_topic_ph')}">${esc(AI.topic)}</textarea></label>
-        <div class="full"><button class="btn primary" data-action="ai-gen" ${AI.busy ? 'disabled' : ''}>${AI.busy ? t('ai_busy') : t('ai_gen')}</button></div>
+        <div class="full"><button class="btn primary" data-action="ai-gen" ${AI.busy ? 'disabled' : ''}>${AI.busy ? t('ai_busy') : ic('sparkles') + ' ' + t('ai_gen')}</button></div>
       </div></section>
       <section class="card"><h3>${t('ai_out')}</h3>
         ${AI.note ? `<div class="note">${esc(AI.note)}</div>` : ''}
@@ -380,7 +403,7 @@ const VIEWS = {
 };
 
 /* ---------------- الرسم ---------------- */
-const NAV = [['dashboard', '📊'], ['clients', '👥'], ['tasks', '✅'], ['calendar', '📅'], ['ai', '✨'], ['settings', '⚙️'], ['site', '🛠️', 'admin'], ['home', '🏠']];
+const NAV = [['dashboard', 'dashboard'], ['clients', 'users'], ['tasks', 'tasks'], ['calendar', 'calendar'], ['content', 'layers'], ['trends', 'flame'], ['ai', 'sparkles'], ['profile', 'building'], ['settings', 'sliders'], ['site', 'shield', 'admin'], ['home', 'home']];
 function renderAuth() {
   const su = authMode === 'signup' && SITE.options.show_signup;
   $('#auth').innerHTML = booting
@@ -415,7 +438,7 @@ function render() {
   if (isSuspended()) { show('auth'); renderBlocked(); document.title = SITE.brand; return; }
   show('app');
   const foot = user ? `${planLine()}<div class="who" dir="ltr">${esc(user.email)}</div><button class="btn sm ghost" data-action="logout">${t('logout')}</button>` : t('foot');
-  const nav = NAV.filter(n => n[2] !== 'admin' || isAdmin).map(([k, ic], i) => `<a href="#${k}" style="--i:${i}" class="${k === r ? 'on' : ''}"><span>${ic}</span>${t('nav_' + k)}</a>`).join('');
+  const nav = NAV.filter(n => n[2] !== 'admin' || isAdmin).map(([k, icn], i) => `<a href="#${k}" style="--i:${i}" class="${k === r ? 'on' : ''}"><span>${ic(icn)}</span>${t('nav_' + k)}</a>`).join('');
   $('#side').innerHTML = `<div class="logo">${brandLockup()}</div><nav class="nav">${nav}</nav><div class="side-foot">${foot}</div>`;
   $('#title').textContent = t('nav_' + r);
   $('#langbtn').textContent = S.lang === 'ar' ? 'EN' : 'عربي';
@@ -456,13 +479,22 @@ function modal(title, body, onOk, onDelete) {
   modalDelete = onDelete || null;
   $('#modal-del').hidden = !onDelete;
   const f = $('#modal-form');
-  f.onsubmit = e => { e.preventDefault(); onOk(Object.fromEntries(new FormData(f))); closeModal(); save(); render(); };
+  f.onsubmit = e => {
+    e.preventDefault();
+    const fin = () => { closeModal(); save(); render(); };
+    let r;
+    try { r = onOk(Object.fromEntries(new FormData(f))); } catch (err) { toast((err && err.message) || t('err_default')); return; }
+    if (r && typeof r.then === 'function') {        // نموذج بيرفع ملف أو بينشر: نستنى
+      const ok = $('#modal-ok'); ok.disabled = true;
+      r.then(fin, err => toast((err && err.message) || t('err_default'))).then(() => { ok.disabled = false; });
+    } else fin();
+  };
   $('#modal').hidden = false;
   const first = $('#modal-body input,#modal-body textarea,#modal-body select'); if (first) first.focus();
 }
 function closeModal() { $('#modal').hidden = true; modalDelete = null; }
 let toastTimer;
-function toast(msg) { const el = $('#toast'); el.textContent = msg; el.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => el.hidden = true, 2000); }
+function toast(msg) { const el = $('#toast'); el.textContent = msg; el.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => el.hidden = true, Math.max(2000, String(msg).length * 70)); }
 
 /* ---------------- نماذج الإدخال ---------------- */
 function clientForm(c) {
@@ -484,17 +516,6 @@ function taskForm(x) {
     d => { if (isNew) S.tasks.push({ id: uid(), ...d, title: d.title.trim() }); else Object.assign(x, d, { title: d.title.trim() }); },
     isNew ? null : () => { if (confirm(t('confirm'))) { S.tasks = S.tasks.filter(y => y.id !== x.id); closeModal(); save(); render(); } });
 }
-function postForm(p, dateDefault, captionDefault) {
-  const isNew = !p; p = p || { client: '', platform: 'Instagram', date: dateDefault || dstr(new Date()), status: 'draft', caption: captionDefault || '' };
-  modal(isNew ? t('add_post') : t('edit'),
-    sel('client', t('f_client'), clientOpts(), p.client) + sel('platform', t('f_platform'), PLATFORMS.map(x => [x, x]), p.platform) +
-    fld('date', t('f_date'), p.date, 'date', 'required') +
-    sel('status', t('f_status'), [['draft', t('ps_draft')], ['pending', t('ps_pending')], ['approved', t('ps_approved')], ['published', t('ps_published')]], p.status) +
-    area('caption', t('f_caption'), p.caption),
-    d => { if (isNew) S.posts.push({ id: uid(), ...d }); else Object.assign(p, d); },
-    isNew ? null : () => { if (confirm(t('confirm'))) { S.posts = S.posts.filter(y => y.id !== p.id); closeModal(); save(); render(); } });
-}
-
 /* ---------------- توليد المحتوى ---------------- */
 function localAI(p) {
   const ar = p.lang !== 'en', b = p.brand, tp = p.topic.trim();
@@ -563,7 +584,7 @@ const ACTIONS = {
     a.download = 'socialdia-nexus-backup-' + dstr(new Date()) + '.json'; a.click();
   },
   import() { $('#imp').click(); },
-  clear() { if (confirm(t('confirm'))) { S = { lang: S.lang, clients: [], tasks: [], posts: [] }; save(); render(); toast(t('cleared')); } }
+  clear() { if (confirm(t('confirm'))) { S = { lang: S.lang, clients: [], tasks: [], posts: [], profiles: S.profiles || [] }; save(); render(); toast(t('cleared')); } }
 };
 document.addEventListener('click', e => {
   const el = e.target.closest('[data-action]');
@@ -572,7 +593,7 @@ document.addEventListener('click', e => {
   if (e.target.closest('.nav a')) $('#side').classList.remove('open');
 });
 document.addEventListener('input', e => { const k = e.target.dataset && e.target.dataset.ai; if (k) AI[k] = e.target.value; });
-document.addEventListener('change', e => {
+document.addEventListener('change', async e => {
   const k = e.target.dataset && e.target.dataset.ai; if (k) AI[k] = e.target.value;
   if (e.target.id === 'imp' && e.target.files[0]) {
     const rd = new FileReader();
@@ -580,7 +601,7 @@ document.addEventListener('change', e => {
       try {
         const d = JSON.parse(rd.result);
         if (!Array.isArray(d.clients) || !Array.isArray(d.tasks) || !Array.isArray(d.posts)) throw new Error('bad');
-        S = { lang: d.lang === 'en' ? 'en' : 'ar', clients: d.clients, tasks: d.tasks, posts: d.posts };
+        S = { lang: d.lang === 'en' ? 'en' : 'ar', clients: d.clients, tasks: d.tasks, posts: d.posts, profiles: Array.isArray(d.profiles) ? d.profiles : (S.profiles || []) };
         save(); render(); toast(t('imported'));
       } catch (err) { toast(t('bad_file')); }
     };
