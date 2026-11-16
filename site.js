@@ -46,12 +46,12 @@ const DEFAULT_SITE = {
     { num: '1', label_ar: 'لوحة واحدة لشغل الوكالة كله', label_en: 'dashboard for the whole agency' }
   ],
   features: [
-    { icon: '👥', title_ar: 'إدارة العملاء', title_en: 'Client management', text_ar: 'ملف لكل عميل: المجال، الاشتراك الشهري، بيانات التواصل، وكل مهامه وبوستاته.', text_en: 'A profile per client: industry, monthly retainer, contact details, plus all their tasks and posts.' },
-    { icon: '✅', title_ar: 'لوحة مهام Kanban', title_en: 'Kanban task board', text_ar: 'اسحب المهمة بين للتنفيذ وقيد التنفيذ وتم، مع أولويات ومواعيد تسليم.', text_en: 'Drag tasks across To do, In progress and Done, with priorities and due dates.' },
-    { icon: '📅', title_ar: 'تقويم المحتوى', title_en: 'Content calendar', text_ar: 'خطط بوستات الشهر لكل منصة، وتابع حالة كل بوست من مسودة لحد منشور.', text_en: 'Plan the month’s posts per platform and track each from draft to published.' },
-    { icon: '✨', title_ar: 'أدوات الذكاء الاصطناعي', title_en: 'AI tools', text_ar: 'كابشنز وإعلانات وسكريبتات وأفكار وبريفات بنبرة كل براند وبالعامية المصرية.', text_en: 'Captions, ads, scripts, ideas and briefs in each brand’s tone, including Egyptian Arabic.' },
-    { icon: '🌐', title_ar: 'عربي وإنجليزي', title_en: 'Arabic & English', text_ar: 'واجهة كاملة بدعم RTL وتبديل فوري بين اللغتين.', text_en: 'A full interface with RTL support and instant language switching.' },
-    { icon: '🔒', title_ar: 'بياناتك محمية', title_en: 'Your data is protected', text_ar: 'كل حساب ليه بياناته المنفصلة والمحمية، وتقدر تحمّل نسخة احتياطية في أي وقت.', text_en: 'Every account has separate, protected data, and you can download a backup any time.' }
+    { icon: 'users', title_ar: 'إدارة العملاء', title_en: 'Client management', text_ar: 'ملف لكل عميل: المجال، الاشتراك الشهري، بيانات التواصل، وكل مهامه وبوستاته.', text_en: 'A profile per client: industry, monthly retainer, contact details, plus all their tasks and posts.' },
+    { icon: 'tasks', title_ar: 'لوحة مهام Kanban', title_en: 'Kanban task board', text_ar: 'اسحب المهمة بين للتنفيذ وقيد التنفيذ وتم، مع أولويات ومواعيد تسليم.', text_en: 'Drag tasks across To do, In progress and Done, with priorities and due dates.' },
+    { icon: 'calendar', title_ar: 'تقويم المحتوى', title_en: 'Content calendar', text_ar: 'خطط بوستات الشهر لكل منصة، وتابع حالة كل بوست من مسودة لحد منشور.', text_en: 'Plan the month’s posts per platform and track each from draft to published.' },
+    { icon: 'sparkles', title_ar: 'أدوات الذكاء الاصطناعي', title_en: 'AI tools', text_ar: 'كابشنز وإعلانات وسكريبتات وأفكار وبريفات بنبرة كل براند وبالعامية المصرية.', text_en: 'Captions, ads, scripts, ideas and briefs in each brand’s tone, including Egyptian Arabic.' },
+    { icon: 'globe', title_ar: 'عربي وإنجليزي', title_en: 'Arabic & English', text_ar: 'واجهة كاملة بدعم RTL وتبديل فوري بين اللغتين.', text_en: 'A full interface with RTL support and instant language switching.' },
+    { icon: 'lock', title_ar: 'بياناتك محمية', title_en: 'Your data is protected', text_ar: 'كل حساب ليه بياناته المنفصلة والمحمية، وتقدر تحمّل نسخة احتياطية في أي وقت.', text_en: 'Every account has separate, protected data, and you can download a backup any time.' }
   ],
   steps: [
     { title_ar: 'أنشئ حسابك', title_en: 'Create your account', text_ar: 'سجّل بالإيميل في أقل من دقيقة وابدأ على طول.', text_en: 'Sign up with your email in under a minute.' },
@@ -81,6 +81,16 @@ const DEFAULT_SITE = {
       features_en: 'Everything in Pro\nHighest AI allowance\nClient portal (coming soon)\nWhite-label reports (coming soon)\nDedicated support',
       cta_ar: 'اشترك الآن', cta_en: 'Subscribe'
     }
+  ],
+  pay: {
+    title_ar: 'طرق الدفع', title_en: 'Payment methods',
+    sub_ar: 'حوّل قيمة الباقة بأي وسيلة من دول، وبنفعّل حسابك بعد التأكيد.', sub_en: 'Pay for your plan with any of these methods and we activate your account after confirming.',
+    note_ar: 'بعد التحويل ابعت صورة الإيصال مع الإيميل المسجّل بيه على واتساب، وهنفعّل اشتراكك في أقرب وقت.', note_en: 'After paying, send the receipt and your account email on WhatsApp and we will activate your plan as soon as possible.'
+  },
+  paymethods: [
+    { id: 'vfcash', name_ar: 'فودافون كاش', name_en: 'Vodafone Cash', icon: 'phone', color: '#e60000', number: '', holder_ar: '', holder_en: '', hint_ar: 'تحويل على المحفظة', hint_en: 'Wallet transfer' },
+    { id: 'instapay', name_ar: 'إنستا باي', name_en: 'InstaPay', icon: 'zap', color: '#6d28d9', number: '', holder_ar: '', holder_en: '', hint_ar: 'تحويل لحظي برقم الموبايل أو عنوان الدفع', hint_en: 'Instant transfer by phone number or payment address' },
+    { id: 'etcash', name_ar: 'اتصالات كاش', name_en: 'Etisalat Cash', icon: 'phone', color: '#4d9a1f', number: '', holder_ar: '', holder_en: '', hint_ar: 'تحويل على المحفظة', hint_en: 'Wallet transfer' }
   ],
   faq: [
     { q_ar: 'إزاي أدفع وأفعّل اشتراكي؟', q_en: 'How do I pay and activate my plan?', a_ar: 'حالياً الاشتراك بيتم بالتواصل معانا عبر واتساب، وبنفعّل حسابك بعد التأكيد. الدفع الإلكتروني قريباً.', a_en: 'For now, subscriptions are arranged by contacting us on WhatsApp and we activate your account after confirmation. Online payment is coming soon.' },
@@ -250,7 +260,7 @@ function renderLanding() {
 
   const features = s.features.map((f, i) => `
     <div class="card ld-card rv zoom" style="--c:var(${tints[i % 4]});--i:${i % 3}">
-      <div class="ld-ic">${esc(f.icon || '⭐')}</div>
+      <div class="ld-ic">${ic(f.icon) || ic('star')}</div>
       <h3>${esc(tx(f, 'title'))}</h3>
       <p>${esc(tx(f, 'text'))}</p>
     </div>`).join('');
@@ -284,12 +294,29 @@ function renderLanding() {
     </div>`;
   }).join('');
 
+  const pm = (s.paymethods || []);
+  const payCards = pm.map((m, i) => {
+    const col = safeColor(m.color, '#64748b'), num = String(m.number || '').trim();
+    return `<div class="card pay rv zoom" style="--c:${col};--i:${i % 3}">
+      <div class="pay-ic">${ic(m.icon) || ic('wallet')}</div>
+      <h3>${esc(tx(m, 'name'))}</h3>
+      ${num ? `<div class="pay-num"><bdi dir="ltr">${esc(num)}</bdi><button type="button" class="btn sm ico" data-action="copy-num" data-id="${esc(num)}" title="${t('pay_copy')}" aria-label="${t('pay_copy')}">${ic('copy')}</button></div>` : ''}
+      ${tx(m, 'holder') ? `<small class="pay-holder">${t('pay_holder')}: ${esc(tx(m, 'holder'))}</small>` : ''}
+      ${tx(m, 'hint') ? `<p>${esc(tx(m, 'hint'))}</p>` : ''}
+    </div>`;
+  }).join('');
+  const payHTML = pm.length ? `<section class="ld-sec" id="sec-pay"><div class="ld-wrap">
+      <h2>${esc(tx(s.pay, 'title'))}</h2><p class="ld-sub">${esc(tx(s.pay, 'sub'))}</p>
+      <div class="ld-pay">${payCards}</div>
+      <div class="pay-note rv"><p>${esc(tx(s.pay, 'note'))}</p>${wa ? `<a class="btn primary" target="_blank" rel="noopener" href="https://wa.me/${wa}?text=${encodeURIComponent(t('pay_wa_msg').replace('{brand}', s.brand))}">${ic('chat')} ${t('pay_send')}</a>` : ''}</div>
+    </div></section>` : '';
+
   const faq = s.faq.map((q, i) => `<details class="card faq rv" style="--i:${i % 4}"><summary>${esc(tx(q, 'q'))}</summary><p>${esc(tx(q, 'a'))}</p></details>`).join('');
 
   const contactBits = [
-    wa ? `<a href="https://wa.me/${wa}" target="_blank" rel="noopener">💬 ${t('whatsapp')}</a>` : '',
-    phone ? `<a href="tel:${esc(phone.replace(/[^\d+]/g, ''))}" dir="ltr">📞 ${esc(phone)}</a>` : '',
-    email ? `<a href="mailto:${esc(email)}" dir="ltr">✉️ ${esc(email)}</a>` : '',
+    wa ? `<a href="https://wa.me/${wa}" target="_blank" rel="noopener">${ic('chat')} ${t('whatsapp')}</a>` : '',
+    phone ? `<a href="tel:${esc(phone.replace(/[^\d+]/g, ''))}" dir="ltr">${ic('call')} ${esc(phone)}</a>` : '',
+    email ? `<a href="mailto:${esc(email)}" dir="ltr">${ic('mail')} ${esc(email)}</a>` : '',
     ...socials.map(([n, u]) => `<a href="${esc(u)}" target="_blank" rel="noopener">${n}</a>`)
   ].filter(Boolean).join('');
 
@@ -302,6 +329,7 @@ function renderLanding() {
         <button class="navlink" data-action="scroll" data-id="features">${t('ld_features')}</button>
         <button class="navlink" data-action="scroll" data-id="how">${t('ld_how')}</button>
         <button class="navlink" data-action="scroll" data-id="plans">${t('ld_plans')}</button>
+        ${(s.paymethods || []).length ? `<button class="navlink" data-action="scroll" data-id="pay">${t('ld_pay')}</button>` : ''}
         <button class="navlink" data-action="scroll" data-id="faq">${t('ld_faq')}</button>
         <button class="navlink" data-action="scroll" data-id="contact">${t('ld_contact')}</button>
       </nav>
@@ -322,8 +350,8 @@ function renderLanding() {
           </div>
         </div>
         <div class="ld-stage" aria-hidden="true"><div class="ld-float">
-          <div class="fchip c2"><i>✨</i>${t('mk_ai')}</div>
-          <div class="fchip c1"><i>✓</i>${t('mk_done')}</div>
+          <div class="fchip c2"><i>${ic('sparkles')}</i>${t('mk_ai')}</div>
+          <div class="fchip c1"><i>${ic('check')}</i>${t('mk_done')}</div>
           <div class="ld-mock">
             <div class="mk-top"><i></i><i></i><i></i><u></u></div>
             <div class="mk-stats">
@@ -332,7 +360,7 @@ function renderLanding() {
               <div style="--c:var(--ok)"><b class="cnt" data-raw="7">${(7).toLocaleString(loc())}</b><u></u></div>
             </div>
             <div class="mk-board">
-              <div class="mk-col"><h5>${t('st_todo')}</h5><div class="mk-slot"><div class="mk-mv"><span></span><u></u><u class="s"></u><b>✓</b></div></div><div class="mk-card" style="--c:var(--acc)"><span></span><u></u></div></div>
+              <div class="mk-col"><h5>${t('st_todo')}</h5><div class="mk-slot"><div class="mk-mv"><span></span><u></u><u class="s"></u><b>${ic('check')}</b></div></div><div class="mk-card" style="--c:var(--acc)"><span></span><u></u></div></div>
               <div class="mk-col"><h5>${t('st_doing')}</h5><div class="mk-slot"></div><div class="mk-card" style="--c:var(--brand)"><span></span><u></u><u class="s"></u></div></div>
               <div class="mk-col"><h5>${t('st_done')}</h5><div class="mk-slot"></div><div class="mk-card" style="--c:var(--ok)"><span></span><u></u></div></div>
             </div>
@@ -369,6 +397,8 @@ function renderLanding() {
       <div class="ld-plans">${plans}</div>
     </div></section>
 
+    ${payHTML}
+
     <section class="ld-sec alt" id="sec-faq"><div class="ld-wrap narrow">
       <h2>${esc(tx(sc, 'faq_title'))}</h2>
       <div class="ld-faq">${faq}</div>
@@ -383,17 +413,18 @@ function renderLanding() {
     <footer class="ld-foot" id="sec-contact"><div class="ld-wrap">
       <div class="foot-top">${brandLockup()}<p>${esc(tx(s.footer, 'text'))}</p></div>
       ${contactBits ? `<div class="foot-links">${contactBits}</div>` : ''}
-      ${tx(c, 'address') ? `<p class="foot-addr">📍 ${esc(tx(c, 'address'))}</p>` : ''}
+      ${tx(c, 'address') ? `<p class="foot-addr">${ic('pin')} ${esc(tx(c, 'address'))}</p>` : ''}
       <p class="foot-copy">© ${new Date().getFullYear().toLocaleString('en-US', { useGrouping: false })} ${esc(s.brand)} — ${t('rights')}</p>
     </div></footer>
-    ${wa ? `<a class="wa-float" href="https://wa.me/${wa}" target="_blank" rel="noopener" aria-label="WhatsApp">💬</a>` : ''}`;
+    ${wa ? `<a class="wa-float" href="https://wa.me/${wa}" target="_blank" rel="noopener" aria-label="WhatsApp">${ic('chat')}</a>` : ''}`;
 
   initLandingFx();}
 
 /* ---------------- لوحة الأدمن: محرر الموقع ---------------- */
 let draft = null, siteTab = CLOUD ? 'users' : 'general';
-const TABS = ['users', 'general', 'hero', 'stats', 'features', 'steps', 'plans', 'faq', 'contact'];
-const TAB_LABEL = { users: 'المستخدمون والاشتراكات', general: 'الهوية والألوان', hero: 'الواجهة والعناوين', stats: 'الأرقام', features: 'المميزات', steps: 'الخطوات', plans: 'الباقات والأسعار', faq: 'الأسئلة الشائعة', contact: 'التواصل والفوتر' };
+const TABS = ['users', 'general', 'hero', 'stats', 'features', 'steps', 'plans', 'payments', 'faq', 'contact'];
+const TAB_ICON = { users: 'users', general: 'sliders', hero: 'home', stats: 'chart', features: 'sparkles', steps: 'rocket', plans: 'wallet', payments: 'cash', faq: 'chat', contact: 'phone' };
+const TAB_LABEL = { users: 'المستخدمون والاشتراكات', general: 'الهوية والألوان', hero: 'الواجهة والعناوين', stats: 'الأرقام', features: 'المميزات', steps: 'الخطوات', plans: 'الباقات والأسعار', payments: 'طرق الدفع', faq: 'الأسئلة الشائعة', contact: 'التواصل والفوتر' };
 const bi = (k, l, t = 'text', extra = {}) => [{ k: k + '_ar', l: l + ' (عربي)', t, ...extra }, { k: k + '_en', l: l + ' (English)', t, ...extra }];
 
 const EDIT = {
@@ -429,6 +460,11 @@ const EDIT = {
     { h: 'الدعوة الختامية (قبل الفوتر)' },
     ...bi('cta.title', 'العنوان'), ...bi('cta.sub', 'الوصف'), ...bi('cta.btn', 'نص الزر')
   ],
+  payments: [
+    { h: 'نصوص قسم طرق الدفع (بيظهر في الصفحة الرئيسية بعد الباقات)' },
+    ...bi('pay.title', 'العنوان'), ...bi('pay.sub', 'الوصف'),
+    ...bi('pay.note', 'تنبيه بعد الوسائل (مثلاً: ابعت الإيصال على واتساب)', 'area')
+  ],
   contact: [
     { h: 'بيانات التواصل (اللي مش مكتوب مش هيظهر)' },
     { k: 'contact.whatsapp', l: 'واتساب بالصيغة الدولية بدون + (مثال 201012345678)', t: 'text', ph: '201012345678' },
@@ -444,7 +480,7 @@ const EDIT = {
   ]
 };
 const LISTS = {
-  features: { add: 'ميزة جديدة', label: i => i.title_ar, fields: [{ k: 'icon', l: 'الأيقونة (إيموجي)', t: 'text', full: 1 }, ...bi('title', 'العنوان'), ...bi('text', 'الوصف', 'area')] },
+  features: { add: 'ميزة جديدة', label: i => i.title_ar, fields: [{ k: 'icon', l: 'الأيقونة', t: 'sel', opts: ICON_CHOICES, full: 1 }, ...bi('title', 'العنوان'), ...bi('text', 'الوصف', 'area')] },
   stats: { add: 'رقم جديد', label: i => `${i.num} — ${i.label_ar}`, fields: [{ k: 'num', l: 'الرقم (ممكن تكتب +500 أو 98%)', t: 'text', full: 1 }, ...bi('label', 'الوصف')] },
   steps: { add: 'خطوة جديدة', label: i => i.title_ar, fields: [...bi('title', 'العنوان'), ...bi('text', 'الوصف', 'area')] },
   plans: {
@@ -452,13 +488,20 @@ const LISTS = {
     fields: [...bi('name', 'اسم الباقة'), { k: 'price', l: 'السعر الشهري (جنيه)', t: 'num' }, { k: 'max_clients', l: 'حد العملاء (0 = بلا حد)', t: 'num' }, { k: 'popular', l: 'علّمها "الأكثر طلباً"', t: 'check' },
       ...bi('desc', 'وصف قصير'), ...bi('features', 'المميزات (سطر لكل ميزة)', 'area'), ...bi('cta', 'نص زر الاشتراك')]
   },
+  paymethods: {
+    add: 'وسيلة دفع جديدة', label: i => `${i.name_ar}${i.number ? ' — ' + i.number : ''}`,
+    fields: [...bi('name', 'اسم الوسيلة'), { k: 'number', l: 'الرقم (محفظة / عنوان إنستا باي / حساب)', t: 'text', full: 1 },
+      { k: 'icon', l: 'الأيقونة', t: 'sel', opts: ICON_CHOICES.concat([['phone', 'موبايل'], ['card', 'بطاقة'], ['cash', 'كاش']]) }, { k: 'color', l: 'لون الكارت', t: 'color' },
+      ...bi('holder', 'باسم (اختياري)'), ...bi('hint', 'ملاحظة قصيرة', 'area')]
+  },
   faq: { add: 'سؤال جديد', label: i => i.q_ar, fields: [...bi('q', 'السؤال'), ...bi('a', 'الإجابة', 'area')] }
 };
 const NEW_ITEM = {
-  features: () => ({ icon: '⭐', title_ar: 'ميزة جديدة', title_en: 'New feature', text_ar: '', text_en: '' }),
+  features: () => ({ icon: 'star', title_ar: 'ميزة جديدة', title_en: 'New feature', text_ar: '', text_en: '' }),
   stats: () => ({ num: '100', label_ar: 'وصف الرقم', label_en: 'Stat label' }),
   steps: () => ({ title_ar: 'خطوة جديدة', title_en: 'New step', text_ar: '', text_en: '' }),
   plans: () => ({ id: uid(), name_ar: 'باقة جديدة', name_en: 'New plan', price: 0, max_clients: 10, popular: false, desc_ar: '', desc_en: '', features_ar: '', features_en: '', cta_ar: 'اشترك الآن', cta_en: 'Subscribe' }),
+  paymethods: () => ({ id: uid(), name_ar: 'وسيلة جديدة', name_en: 'New method', icon: 'wallet', color: '#0ea5e9', number: '', holder_ar: '', holder_en: '', hint_ar: '', hint_en: '' }),
   faq: () => ({ q_ar: 'سؤال جديد', q_en: 'New question', a_ar: '', a_en: '' })
 };
 
@@ -472,6 +515,7 @@ function fieldHTML(f, base) {
   const path = base ? `${base}.${f.k}` : f.k, v = getp(draft, path), cls = f.full ? 'full' : '';
   const ph = f.ph ? ` placeholder="${esc(f.ph)}"` : '';
   if (f.t === 'area') return `<label class="f ${cls}">${f.l}<textarea data-path="${path}"${ph}>${esc(v)}</textarea></label>`;
+  if (f.t === 'sel') { const cur = EMOJI_ICON[v] || v; return `<label class="f ${cls}">${f.l}<span class="selrow"><span class="selprev">${ic(cur) || ''}</span><select data-path="${path}">${f.opts.map(([o, l]) => `<option value="${esc(o)}" ${o === cur ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></span></label>`; }
   if (f.t === 'num') return `<label class="f ${cls}">${f.l}<input type="number" min="0" data-path="${path}" data-type="num" value="${esc(v)}">${f.note ? `<small>${f.note}</small>` : ''}</label>`;
   if (f.t === 'color') return `<label class="f ${cls}">${f.l}<span class="colorrow"><input type="color" data-path="${path}" data-type="color" value="${esc(safeColor(v, '#000000'))}"><code>${esc(v)}</code></span></label>`;
   if (f.t === 'check') return `<label class="f chk ${cls}"><span><input type="checkbox" data-path="${path}" data-type="bool" ${v ? 'checked' : ''}> ${f.l}</span>${f.note ? `<small>${f.note}</small>` : ''}</label>`;
@@ -480,13 +524,14 @@ function fieldHTML(f, base) {
 }
 function listHTML(key) {
   const def = LISTS[key], items = draft[key];
-  return `<div class="bar"><button class="btn primary" data-action="site-add" data-id="${key}">＋ ${def.add}</button></div>` +
+  return `<div class="bar"><button class="btn primary" data-action="site-add" data-id="${key}">${ic('plus')} ${def.add}</button></div>` +
     (items.length ? items.map((it, i) => `
       <div class="card item">
         <div class="item-head"><b>${i + 1}. ${esc(def.label(it) || '—')}</b><span class="spacer"></span>
           <button type="button" class="btn sm" data-action="site-up" data-id="${key}.${i}" ${i === 0 ? 'disabled' : ''}>↑</button>
           <button type="button" class="btn sm" data-action="site-down" data-id="${key}.${i}" ${i === items.length - 1 ? 'disabled' : ''}>↓</button>
-          <button type="button" class="btn sm danger" data-action="site-del" data-id="${key}.${i}">حذف</button>
+          <button type="button" class="btn sm" data-action="site-dup" data-id="${key}.${i}">${ic('copy')} نسخ</button>
+          <button type="button" class="btn sm danger" data-action="site-del" data-id="${key}.${i}">${ic('trash')} حذف</button>
         </div>
         <div class="form">${def.fields.map(f => fieldHTML(f, `${key}.${i}`)).join('')}</div>
       </div>`).join('') : `<div class="card">${empty()}</div>`);
@@ -568,14 +613,14 @@ function userRowVals(id) {
 
 VIEWS.site = function () {
   if (siteTab === 'users') {
-    const tabs = TABS.map(k => `<button type="button" class="tab ${k === siteTab ? 'on' : ''}" data-action="site-tab" data-id="${k}">${TAB_LABEL[k]}</button>`).join('');
+    const tabs = TABS.map(k => `<button type="button" class="tab ${k === siteTab ? 'on' : ''}" data-action="site-tab" data-id="${k}">${ic(TAB_ICON[k])} ${TAB_LABEL[k]}</button>`).join('');
     return `<div class="tabs">${tabs}</div>${usersTab()}`;
   }
   if (!draft) draft = clone(SITE);
-  const tabs = TABS.map(k => `<button type="button" class="tab ${k === siteTab ? 'on' : ''}" data-action="site-tab" data-id="${k}">${TAB_LABEL[k]}</button>`).join('');
-  const body = LISTS[siteTab]
-    ? listHTML(siteTab)
-    : `<div class="card"><div class="form">${EDIT[siteTab].map(f => (f.h ? `<h4 class="eh full">${f.h}</h4>` : fieldHTML(f, ''))).join('')}</div></div>`;
+  const tabs = TABS.map(k => `<button type="button" class="tab ${k === siteTab ? 'on' : ''}" data-action="site-tab" data-id="${k}">${ic(TAB_ICON[k])} ${TAB_LABEL[k]}</button>`).join('');
+  const formCard = () => `<div class="card"><div class="form">${EDIT[siteTab].map(f => (f.h ? `<h4 class="eh full">${f.h}</h4>` : fieldHTML(f, ''))).join('')}</div></div>`;
+  const body = siteTab === 'payments' ? formCard() + `<h4 class="eh">وسائل الدفع</h4>` + listHTML('paymethods')
+    : LISTS[siteTab] ? listHTML(siteTab) : formCard();
   return `
     <div class="sitebar card">
       <div class="grow"><b>إدارة الموقع</b><br><small>${CLOUD ? 'التغييرات بتظهر لكل الزوار بعد الحفظ.' : 'الوضع المحلي: التغييرات محفوظة في متصفحك فقط. اربط Supabase عشان تظهر لكل الزوار.'}</small></div>
@@ -635,6 +680,8 @@ Object.assign(ACTIONS, {
   'site-del'(id) { const [k, i] = id.split('.'); if (confirm('متأكد من الحذف؟')) { draft[k].splice(+i, 1); render(); } },
   'site-up'(id) { const [k, i] = id.split('.'); if (+i > 0) { swap(draft[k], +i, +i - 1); render(); } },
   'site-down'(id) { const [k, i] = id.split('.'); if (+i < draft[k].length - 1) { swap(draft[k], +i, +i + 1); render(); } },
+  'site-dup'(id) { const [k, i] = id.split('.'); const it = clone(draft[k][+i]); if ('id' in it) it.id = uid(); if (it.name_ar) it.name_ar += ' (نسخة)'; if (it.popular) it.popular = false; draft[k].splice(+i + 1, 0, it); render(); },
+  'copy-num'(id) { copyText(id); toast(t('num_copied')); },
   'site-save'() { return doSave(false); },
   'site-save-view'() { return doSave(true); },
   'site-discard'() { draft = clone(SITE); applyTheme(); render(); },
