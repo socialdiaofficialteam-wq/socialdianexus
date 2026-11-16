@@ -40,7 +40,7 @@ const T = {
     foot: 'نسخة MVP', hi: 'نظرة سريعة على وكالتك',
     tagline: 'منصة إدارة وكالات التسويق', auth_login: 'تسجيل الدخول', auth_signup: 'إنشاء حساب', auth_email: 'البريد الإلكتروني', auth_pass: 'كلمة المرور',
     auth_to_signup: 'مفيش عندك حساب؟ أنشئ حساب', auth_to_login: 'عندك حساب؟ سجّل دخول', auth_check_mail: 'تم إنشاء الحساب. افتح بريدك واضغط على رابط التأكيد، وبعدها سجّل دخول.',
-    auth_err: 'حصل خطأ، حاول تاني', logout: 'خروج', sync_err: 'تعذّر الحفظ على السحابة، هنحاول تاني مع أول تعديل', ai_limit: 'وصلت للحد الأقصى من التوليد في الساعة، حاول بعد شوية', cloud_on: 'الحفظ السحابي شغّال: بياناتك محفوظة على حسابك.',
+    auth_err: 'حصل خطأ، حاول تاني', logout: 'خروج', sync_err: 'تعذّر الحفظ على السحابة، هنحاول تاني مع أول تعديل', load_err: 'تعذّر تحميل بياناتك من السحابة. راجع إن schema.sql اتشغّل كامل في Supabase', ai_limit: 'وصلت للحد الأقصى من التوليد في الساعة، حاول بعد شوية', cloud_on: 'الحفظ السحابي شغّال: بياناتك محفوظة على حسابك.',
     nav_site: 'إدارة الموقع', nav_home: 'الصفحة الرئيسية', ld_features: 'المميزات', ld_how: 'كيف يعمل', ld_plans: 'الباقات', ld_faq: 'الأسئلة', ld_contact: 'تواصل',
     open_app: 'لوحة التحكم', per_month: 'شهرياً', popular: 'الأكثر طلباً', subscribe: 'اشترك الآن', wa_msg: 'أرغب في الاشتراك في باقة {plan} على {brand}',
     whatsapp: 'واتساب',
@@ -83,7 +83,7 @@ const T = {
     foot: 'MVP build', hi: 'A quick look at your agency',
     tagline: 'Marketing agency OS', auth_login: 'Sign in', auth_signup: 'Create account', auth_email: 'Email', auth_pass: 'Password',
     auth_to_signup: "No account? Create one", auth_to_login: 'Have an account? Sign in', auth_check_mail: 'Account created. Open your email, click the confirmation link, then sign in.',
-    auth_err: 'Something went wrong, try again', logout: 'Sign out', sync_err: "Couldn't save to the cloud; we'll retry on your next change", ai_limit: 'Hourly generation limit reached, try again later', cloud_on: 'Cloud saving is on: your data is stored on your account.',
+    auth_err: 'Something went wrong, try again', logout: 'Sign out', sync_err: "Couldn't save to the cloud; we'll retry on your next change", load_err: "Couldn't load your data from the cloud. Check that schema.sql ran fully in Supabase", ai_limit: 'Hourly generation limit reached, try again later', cloud_on: 'Cloud saving is on: your data is stored on your account.',
     nav_site: 'Site admin', nav_home: 'Home page', ld_features: 'Features', ld_how: 'How it works', ld_plans: 'Plans', ld_faq: 'FAQ', ld_contact: 'Contact',
     open_app: 'Dashboard', per_month: 'month', popular: 'Most popular', subscribe: 'Subscribe', wa_msg: 'I would like to subscribe to the {plan} plan on {brand}',
     whatsapp: 'WhatsApp',
@@ -273,7 +273,7 @@ function bootCloud() {
         let okRole = true;
         try { okRole = await loadRole(); } catch (e) { okRole = true; }
         if (!okRole) { toast(t('staff_removed')); booting = false; user = null; sb.auth.signOut(); render(); return; }
-        try { await pullCloud(); } catch (e) { toast(t('sync_err')); }
+        try { await pullCloud(); } catch (e) { console.error(e); toast(t('load_err') + (e && e.message ? ': ' + e.message : '')); }
         try { isAdmin = isStaff() ? false : await checkAdmin(); } catch (e) { isAdmin = false; }
         booting = false;
         if (typeof startLive === 'function') startLive();
