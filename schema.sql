@@ -2,11 +2,11 @@
 -- شغّل الملف ده مرة واحدة في Supabase → SQL Editor → New query → Run
 -- (آمن تشغّله تاني: كله if not exists / drop policy if exists)
 
--- ============ 1) بيانات المستخدمين: عملاء / مهام / بوستات ============
+-- ============ 1) بيانات المستخدمين: عملاء / مهام / بوستات / بروفايل الشركة والفريق ============
 do $$
 declare tb text;
 begin
-  foreach tb in array array['clients', 'tasks', 'posts'] loop
+  foreach tb in array array['clients', 'tasks', 'posts', 'profiles'] loop
     execute format($f$
       create table if not exists public.%I (
         owner      uuid not null default auth.uid() references auth.users(id) on delete cascade,
@@ -83,11 +83,12 @@ create policy "read own subscription" on public.subscriptions
   using (user_id = (select auth.uid()));
 
 -- ============ 5) دوال الأدمن (security definer + فحص إن المستدعي أدمن) ============
+drop function if exists public.admin_list_users();
 create or replace function public.admin_list_users()
 returns table (
   id uuid, email text, created_at timestamptz, last_sign_in_at timestamptz,
   plan_id text, status text, max_clients int, expires_at timestamptz,
-  is_admin boolean, clients bigint, tasks bigint, posts bigint
+  is_admin boolean, clients bigint, tasks bigint, posts bigint, company text
 )
 language plpgsql security definer set search_path = ''
 as $$
@@ -102,7 +103,8 @@ begin
            exists (select 1 from public.admins a where a.user_id = u.id),
            (select count(*) from public.clients c where c.owner = u.id),
            (select count(*) from public.tasks t where t.owner = u.id),
-           (select count(*) from public.posts p where p.owner = u.id)
+           (select count(*) from public.posts p where p.owner = u.id),
+           (select pr.data->>'company' from public.profiles pr where pr.owner = u.id and pr.id = 'me')
     from auth.users u
     left join public.subscriptions s on s.user_id = u.id
     order by u.created_at desc
@@ -217,16 +219,22 @@ end $$;
 do $$
 declare tb text;
 begin
-  foreach tb in array array['clients', 'tasks', 'posts'] loop
+  foreach tb in array array['clients', 'tasks', 'posts', 'profiles'] loop
     execute format('drop trigger if exists plan_guard on public.%I', tb);
     execute format('create trigger plan_guard before insert on public.%I for each row execute function public.enforce_plan()', tb);
   end loop;
 end $$;
 
--- ============ 7) تعيين أول أدمن ============
+-- ============ 7) تنظيف (اختياري) ============
+-- لو كنت شغّلت نسخة سابقة فيها ربط مباشر مع السوشيال، الجداول دي مبقتش مستخدمة. تقدر تمسحها بأمان:
+-- drop table if exists public.social_tokens;
+-- drop table if exists public.social_accounts;
+
+-- ============ 8) تعيين أول أدمن ============
 -- 1) سجّل حساب عادي من الموقع بإيميلك.
 -- 2) بدّل الإيميل تحت بإيميلك وشغّل السطرين دول لوحدهم:
 --
 insert into public.admins (user_id)
  select id from auth.users where email = 'admin@adsocialdia.app'
  on conflict do nothing;
+
