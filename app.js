@@ -114,6 +114,9 @@ const emptyState = lang => ({ lang, clients: [], tasks: [], posts: [], profiles:
 let S = CLOUD ? emptyState(savedLang()) : load();
 let sb = null, user = null, booting = CLOUD, authMode = 'login';
 let SUB = null; // اشتراك المستخدم الحالي (من جدول subscriptions)
+let STAFF = null, COMPANY = null, STAFFROWS = {}, savedAt = 0; // موظف؟ (صف staff_members) / صاحب الشركة / حسابات دخول الفريق / آخر تعديل محلي
+const companyId = () => COMPANY || (user && user.id);
+const isStaff = () => !!STAFF;
 let isAdmin = !CLOUD; // في الوضع المحلي (تجربة) صاحب الجهاز هو الأدمن
 let synced = { clients: {}, tasks: {}, posts: {}, profiles: {} };
 let syncChain = Promise.resolve();
@@ -157,7 +160,7 @@ function save() {
     localStorage.setItem(LANG_KEY, S.lang);
     if (!CLOUD) localStorage.setItem(KEY, JSON.stringify(S)); // في الوضع السحابي مبنخزنش بيانات العملاء في المتصفح
   } catch (e) {}
-  if (CLOUD && user) queueSync();
+  if (CLOUD && user) { savedAt = Date.now(); queueSync(); }
 }
 
 /* ---------------- المزامنة مع Supabase ---------------- */
@@ -171,12 +174,12 @@ async function pushCloud() {
     const del = Object.keys(synced[tb]).filter(id => !(id in cur));
     if (up.length) {
       const now = new Date().toISOString();
-      const { error } = await sb.from(tb).upsert(up.map(x => ({ owner: user.id, id: x.id, data: x, updated_at: now })), { onConflict: 'owner,id' });
+      const { error } = await sb.from(tb).upsert(up.map(x => ({ owner: companyId(), id: x.id, data: x, updated_at: now })), { onConflict: 'owner,id' });
       if (error) throw error;
       up.forEach(x => { synced[tb][x.id] = cur[x.id]; });
     }
     if (del.length) {
-      const { error } = await sb.from(tb).delete().eq('owner', user.id).in('id', del);
+      const { error } = await sb.from(tb).delete().eq('owner', companyId()).in('id', del);
       if (error) throw error;
       del.forEach(id => { delete synced[tb][id]; });
     }
@@ -193,22 +196,40 @@ function queueSync() {
   });
   return syncChain;
 }
-async function pullCloud() {
+// بيجيب بيانات الشركة (من غير ما يغيّر الحالة). صاحب الشركة وموظفينه بيقروا نفس الصفوف.
+async function fetchCloud() {
   const out = emptyState(S.lang);
   const map = { clients: {}, tasks: {}, posts: {}, profiles: {} };
   for (const tb of TABLES) {
-    const { data, error } = await sb.from(tb).select('id,data').eq('owner', user.id).limit(5000);
+    const { data, error } = await sb.from(tb).select('id,data').eq('owner', companyId()).limit(5000);
     if (error) throw error;
     out[tb] = (data || []).map(r => ({ ...r.data, id: r.id }));
     out[tb].forEach(x => { map[tb][x.id] = JSON.stringify(x); });
   }
-  S = out; synced = map;
+  let sub = null, rows = null;
   try {
-    const r = await sb.from('subscriptions').select('plan_id,status,max_clients,expires_at').eq('user_id', user.id).maybeSingle();
-    SUB = r.error ? null : r.data;
-  } catch (e) { SUB = null; }
+    const r = await sb.from('subscriptions').select('plan_id,status,max_clients,expires_at').eq('user_id', companyId()).maybeSingle();
+    sub = r.error ? null : r.data;
+  } catch (e) { sub = null; }
+  if (!isStaff()) {
+    try { const r = await sb.from('staff_members').select('member_id,username'); if (!r.error) { rows = {}; (r.data || []).forEach(x => { rows[x.member_id] = x.username; }); } } catch (e) {}
+  }
+  return { out, map, sub, rows };
 }
-function resetState() { SUB = null; S = emptyState(S.lang); synced = { clients: {}, tasks: {}, posts: {}, profiles: {} }; }
+function applyCloud(r) { S = r.out; synced = r.map; SUB = r.sub; if (r.rows) STAFFROWS = r.rows; }
+async function pullCloud() { applyCloud(await fetchCloud()); }
+// موظف؟ بنعرف من app_metadata (المستخدم مايقدرش يعدّلها) ونتأكد إن صفه لسه موجود (لو صاحب الشركة حذفه يطلع)
+async function loadRole() {
+  STAFF = null; COMPANY = user.id;
+  const am = user.app_metadata || {};
+  if (am.role !== 'staff') return true;
+  const { data, error } = await sb.from('staff_members').select('owner,member_id,username').eq('staff_user_id', user.id).maybeSingle();
+  if (error) { STAFF = { owner: am.owner, member_id: am.member_id, username: '' }; COMPANY = am.owner; return true; }
+  if (!data) return false;
+  STAFF = data; COMPANY = data.owner;
+  return true;
+}
+function resetState() { SUB = null; STAFF = null; COMPANY = null; STAFFROWS = {}; S = emptyState(S.lang); synced = { clients: {}, tasks: {}, posts: {}, profiles: {} }; if (typeof teamReset === 'function') teamReset(); }
 /* ---------------- الاشتراك والحدود ---------------- */
 const subActive = () => !!SUB && SUB.status === 'active' && (!SUB.expires_at || new Date(SUB.expires_at) > new Date());
 const isSuspended = () => CLOUD && !isAdmin && !!SUB && SUB.status === 'suspended';
@@ -249,9 +270,13 @@ function bootCloud() {
     setTimeout(async () => {
       if (u && (!user || user.id !== u.id)) {
         user = u;
+        let okRole = true;
+        try { okRole = await loadRole(); } catch (e) { okRole = true; }
+        if (!okRole) { toast(t('staff_removed')); booting = false; user = null; sb.auth.signOut(); render(); return; }
         try { await pullCloud(); } catch (e) { toast(t('sync_err')); }
-        try { isAdmin = await checkAdmin(); } catch (e) { isAdmin = false; }
+        try { isAdmin = isStaff() ? false : await checkAdmin(); } catch (e) { isAdmin = false; }
         booting = false;
+        if (typeof startLive === 'function') startLive();
         if (route === 'login') go('dashboard'); else render();
       } else if (!u) {
         const was = user; user = null; isAdmin = false; booting = false;
@@ -301,7 +326,7 @@ const VIEWS = {
     const total = S.tasks.length, done = total - open.length, pct = total ? Math.round(done / total * 100) : 0;
     const late = open.filter(x => x.due && x.due < today).length;
     const co = (typeof me === 'function' ? me().company : '') || '';
-    const name = co.trim() || (user && user.email ? user.email.split('@')[0] : '');
+    const name = isStaff() && typeof staffName === 'function' ? staffName() : (co.trim() || (user && user.email ? user.email.split('@')[0] : ''));
     const greet = new Date().getHours() < 12 ? t('good_am') : t('good_pm');
     const dateStr = new Date().toLocaleDateString(loc(), { weekday: 'long', day: 'numeric', month: 'long' });
     const seg = (items) => { const n = items.reduce((a, x) => a + x[1], 0); return n ? `<div class="seg">${items.map(([k, v, c]) => v ? `<i style="--v:${v};--c:${c}" title="${esc(k)}: ${v}"></i>` : '').join('')}</div>` : ''; };
@@ -310,7 +335,7 @@ const VIEWS = {
     const pItems = ['draft', 'pending', 'approved', 'published'].map((k, i) => [t('ps_' + k), S.posts.filter(x => x.status === k).length, ['#9ca3af', 'var(--acc)', 'var(--sec)', 'var(--ok)'][i]]);
     return `<section class="dash-hero">
         <div class="aurora" aria-hidden="true"><i></i><i></i></div>
-        <div class="dh-text"><small>${esc(dateStr)}</small><h2>${greet}${name ? '، ' + esc(name) : ''}</h2><p>${late ? t('late_n').replace('{n}', late.toLocaleString(loc())) : t('all_good')}</p></div>
+        <div class="dh-text"><small>${esc(dateStr)}</small><h2>${greet}${name ? '، ' + esc(name) : ''}</h2>${isStaff() ? `<span class="dh-chip">${ic('building')} ${t('staff_works_at')} <b>${esc(co.trim() || '—')}</b></span>` : ''}<p>${late ? t('late_n').replace('{n}', late.toLocaleString(loc())) : t('all_good')}</p></div>
         <div class="dh-acts"><button class="btn primary" data-action="add-client">${ic('plus')} ${t('add_client')}</button><button class="btn glass" data-action="add-task">${ic('plus')} ${t('add_task')}</button><button class="btn glass" data-action="add-post">${ic('plus')} ${t('add_post')}</button></div>
       </section>
       <div class="stats">${stat(ic('users'), t('stat_clients'), S.clients.length.toLocaleString(loc()), '--brand', S.clients.length)}${stat(ic('cash'), t('stat_mrr'), money(mrr), '--ok', mrr, ' ' + t('cur'))}${stat(ic('tasks'), t('stat_open'), open.length.toLocaleString(loc()), '--sec', open.length)}${stat(ic('calendar'), t('stat_posts'), pm.toLocaleString(loc()), '--acc', pm)}</div>
@@ -403,20 +428,25 @@ const VIEWS = {
 };
 
 /* ---------------- الرسم ---------------- */
-const NAV = [['dashboard', 'dashboard'], ['clients', 'users'], ['tasks', 'tasks'], ['calendar', 'calendar'], ['content', 'layers'], ['trends', 'flame'], ['ai', 'sparkles'], ['profile', 'building'], ['settings', 'sliders'], ['site', 'shield', 'admin'], ['home', 'home']];
+const NAV = [['dashboard', 'dashboard'], ['clients', 'users'], ['tasks', 'tasks'], ['calendar', 'calendar'], ['chat', 'chat', 'cloud'], ['content', 'layers'], ['trends', 'flame'], ['ai', 'sparkles'], ['profile', 'building'], ['settings', 'sliders', 'owner'], ['site', 'shield', 'admin'], ['home', 'home']];
 function renderAuth() {
-  const su = authMode === 'signup' && SITE.options.show_signup;
+  const stf = CLOUD && authMode === 'staff';
+  const su = !stf && authMode === 'signup' && SITE.options.show_signup;
   $('#auth').innerHTML = booting
     ? `<div class="auth-card"><div class="logo">${brandLockup()}</div></div>`
     : `<form id="auth-form" class="auth-card" novalidate>
         <div class="auth-top"><div class="logo">${brandLockup()}</div><button type="button" class="btn ghost sm" data-action="lang">${S.lang === 'ar' ? 'EN' : 'عربي'}</button></div>
         <p class="auth-sub">${t('tagline')}</p>
-        <h2>${su ? t('auth_signup') : t('auth_login')}</h2>
-        <label class="f">${t('auth_email')}<input name="email" type="email" required autocomplete="email" dir="ltr"></label>
-        <label class="f">${t('auth_pass')}<input name="password" type="password" required minlength="6" autocomplete="${su ? 'new-password' : 'current-password'}" dir="ltr"></label>
+        ${CLOUD ? `<div class="auth-tabs" role="tablist"><button type="button" role="tab" aria-selected="${!stf}" class="${stf ? '' : 'on'}" data-action="auth-tab" data-id="owner">${t('auth_tab_owner')}</button><button type="button" role="tab" aria-selected="${stf}" class="${stf ? 'on' : ''}" data-action="auth-tab" data-id="staff">${t('auth_tab_staff')}</button></div>` : ''}
+        <h2>${stf ? t('auth_staff_title') : su ? t('auth_signup') : t('auth_login')}</h2>
+        ${stf ? `<p class="auth-sub">${t('auth_staff_sub')}</p>
+        <label class="f">${t('auth_username')}<input name="username" required autocomplete="username" autocapitalize="none" spellcheck="false" dir="ltr"></label>
+        <label class="f">${t('auth_pass')}<input name="password" type="password" required autocomplete="current-password" dir="ltr"></label>`
+        : `<label class="f">${t('auth_email')}<input name="email" type="email" required autocomplete="email" dir="ltr"></label>
+        <label class="f">${t('auth_pass')}<input name="password" type="password" required minlength="6" autocomplete="${su ? 'new-password' : 'current-password'}" dir="ltr"></label>`}
         <div id="auth-msg" class="auth-msg" role="alert"></div>
         <button class="btn primary" id="auth-btn" type="submit">${su ? t('auth_signup') : t('auth_login')}</button>
-        ${SITE.options.show_signup ? `<button type="button" class="btn ghost" data-action="auth-toggle">${su ? t('auth_to_login') : t('auth_to_signup')}</button>` : ''}
+        ${SITE.options.show_signup && !stf ? `<button type="button" class="btn ghost" data-action="auth-toggle">${su ? t('auth_to_login') : t('auth_to_signup')}</button>` : ''}
         <button type="button" class="btn ghost" data-action="go-home">← ${t('back_home')}</button>
       </form>`;
 }
@@ -432,13 +462,14 @@ function render() {
   let r = route;
   if (r === 'login' && (!CLOUD || user)) r = 'dashboard';   // مفيش داعي لشاشة الدخول
   if (r === 'site' && !isAdmin) r = 'dashboard';            // صفحة الأدمن للأدمن بس
+  if ((r === 'settings' && isStaff()) || (r === 'chat' && !(CLOUD && user))) r = 'dashboard';
   if (r === 'home') { show('landing'); renderLanding(); document.title = SITE.brand; return; }
   if (r === 'login' || (VIEWS[r] && CLOUD && !user)) { show('auth'); renderAuth(); document.title = SITE.brand; return; }
   if (!VIEWS[r]) r = 'dashboard';
   if (isSuspended()) { show('auth'); renderBlocked(); document.title = SITE.brand; return; }
   show('app');
-  const foot = user ? `${planLine()}<div class="who" dir="ltr">${esc(user.email)}</div><button class="btn sm ghost" data-action="logout">${t('logout')}</button>` : t('foot');
-  const nav = NAV.filter(n => n[2] !== 'admin' || isAdmin).map(([k, icn], i) => `<a href="#${k}" style="--i:${i}" class="${k === r ? 'on' : ''}"><span>${ic(icn)}</span>${t('nav_' + k)}</a>`).join('');
+  const foot = user ? (isStaff() && typeof staffFoot === 'function' ? staffFoot() : `${planLine()}<div class="who" dir="ltr">${esc(user.email)}</div><button class="btn sm ghost" data-action="logout">${t('logout')}</button>`) : t('foot');
+  const nav = NAV.filter(n => (n[2] !== 'admin' || isAdmin) && (n[2] !== 'cloud' || (CLOUD && user)) && (n[2] !== 'owner' || !isStaff())).map(([k, icn], i) => `<a href="#${k}" style="--i:${i}" class="${k === r ? 'on' : ''}"><span>${ic(icn)}</span>${t('nav_' + k)}${k === 'chat' && typeof CHAT !== 'undefined' && CHAT.unread > 0 ? `<em class="bdg">${CHAT.unread > 99 ? '99+' : CHAT.unread}</em>` : ''}</a>`).join('');
   $('#side').innerHTML = `<div class="logo">${brandLockup()}</div><nav class="nav">${nav}</nav><div class="side-foot">${foot}</div>`;
   $('#title').textContent = t('nav_' + r);
   $('#langbtn').textContent = S.lang === 'ar' ? 'EN' : 'عربي';
@@ -563,6 +594,7 @@ async function aiGen() {
 const ACTIONS = {
   menu() { $('#side').classList.toggle('open'); },
   lang() { S.lang = S.lang === 'ar' ? 'en' : 'ar'; save(); render(); },
+  'auth-tab'(id) { authMode = id === 'staff' ? 'staff' : 'login'; render(); },
   'auth-toggle'() { authMode = authMode === 'login' ? 'signup' : 'login'; render(); },
   logout() { if (sb) sb.auth.signOut(); },  close() { closeModal(); },
   'modal-del'() { if (modalDelete) modalDelete(); },
@@ -618,6 +650,10 @@ document.addEventListener('submit', async e => {
   const email = String(f.get('email') || '').trim(), password = String(f.get('password') || '');
   const msg = $('#auth-msg'), btn = $('#auth-btn');
   btn.disabled = true; msg.className = 'auth-msg'; msg.textContent = '';
+  if (authMode === 'staff') {
+    try { await staffLogin(String(f.get('username') || ''), password); } catch (err) { msg.className = 'auth-msg'; msg.textContent = (err && err.message) || t('auth_err'); }
+    btn.disabled = false; return;
+  }
   try {
     if (authMode === 'signup' && SITE.options.show_signup) {
       const { data, error } = await sb.auth.signUp({ email, password });

@@ -175,39 +175,65 @@ function waDigits(n) {
   return /^\d{8,15}$/.test(d) ? d : '';
 }
 function memberForm(m) {
-  const isNew = !m; m = m || { name: '', role: '', wa: '' };
-  modal(isNew ? t('team_add') : t('edit'),
-    fld('name', t('team_name'), m.name, 'text', 'required full') + fld('role', t('team_role'), m.role, 'text', 'full') +
-    `<label class="f full">${t('team_wa')}<input name="wa" type="tel" dir="ltr" value="${esc(m.wa)}" placeholder="201012345678"><small class="mut">${t('team_wa_hint')}</small></label>`,
-    d => {
+  let cur = m || null;                       // بعد أول حفظ ناجح بنكمل على نفس الموظف (مش بنكرره لو حصل خطأ في الحساب)
+  const base = m || { name: '', role: '', wa: '' };
+  const login = cur && STAFFROWS[cur.id] ? STAFFROWS[cur.id] : '';
+  const canLogin = CLOUD && !isStaff();
+  const loginBox = canLogin ? `<div class="full login-box"><h4>${ic('lock')} ${t('login_title')}</h4><p class="sub">${login ? t('login_have') : t('login_sub')}</p>
+      <div class="form">${fld('username', t('auth_username'), login, 'text', 'autocomplete="off" autocapitalize="none" spellcheck="false" dir="ltr" maxlength="30" placeholder="ahmed.ali"')}
+      <label class="f">${login ? t('login_newpass') : t('auth_pass')}<input name="password" type="text" autocomplete="off" spellcheck="false" dir="ltr" maxlength="72" placeholder="${t('login_pass_hint')}"></label></div></div>` : '';
+  modal(m ? t('edit') : t('team_add'),
+    fld('name', t('team_name'), base.name, 'text', 'required full') + fld('role', t('team_role'), base.role, 'text', 'full') +
+    `<label class="f full">${t('team_wa')}<input name="wa" type="tel" dir="ltr" value="${esc(base.wa)}" placeholder="201012345678"><small class="mut">${t('team_wa_hint')}</small></label>` + loginBox,
+    async d => {
       if (d.wa && !waDigits(d.wa)) throw new Error(t('team_bad_wa'));
       const rec = { name: d.name.trim(), role: d.role.trim(), wa: d.wa.trim() };
+      const un = String(d.username || '').trim().toLowerCase(), pw = String(d.password || '').trim();
+      if (canLogin && (un || pw)) {
+        if (!/^[a-z0-9._-]{3,30}$/.test(un)) throw new Error(t('serr_username_invalid'));
+        if (!login && !pw) throw new Error(t('serr_need_password'));
+        if (pw && pw.length < 8) throw new Error(t('serr_weak_password'));
+      }
       const p = ensureMe();
-      if (isNew) p.team.push({ id: uid(), ...rec }); else Object.assign(m, rec);
+      if (!cur) { cur = { id: uid(), ...rec }; p.team.push(cur); } else Object.assign(cur, rec);
+      if (canLogin && (un || pw)) {
+        save(); await syncChain;                                  // الموظف لازم يكون اتحفظ في فريق الشركة الأول
+        const r = await staffApi('save', { member_id: cur.id, username: un, password: pw });
+        STAFFROWS[cur.id] = r.username;
+        toast(t('login_saved').replace('{u}', r.username));
+      }
     },
-    isNew ? null : () => { if (confirm(t('confirm'))) { const p = ensureMe(); p.team = p.team.filter(x => x.id !== m.id); closeModal(); save(); render(); } });
+    m ? () => {
+      if (!confirm(login ? t('login_confirm_del') : t('confirm'))) return;
+      (async () => {
+        try {
+          if (STAFFROWS[m.id]) { await staffApi('remove', { member_id: m.id }); delete STAFFROWS[m.id]; }
+          const p = ensureMe(); p.team = p.team.filter(x => x.id !== m.id); closeModal(); save(); render();
+        } catch (e) { toast((e && e.message) || t('err_default')); }
+      })();
+    } : null);
 }
 VIEWS.profile = function () {
-  const p = me(), team = p.team || [];
+  const p = me(), team = p.team || [], ro = isStaff();
   const rows = team.map(m => {
     const d = waDigits(m.wa);
     return `<div class="row member"><span class="avatar sm">${esc((m.name || '?').trim().charAt(0).toUpperCase())}</span>
-      <div class="grow"><b>${esc(m.name)}</b><br><small>${esc(m.role || '—')}${m.wa ? ` · <bdi dir="ltr">${esc(m.wa)}</bdi>` : ''}</small></div>
+      <div class="grow"><b>${esc(m.name)}</b>${STAFFROWS[m.id] && !ro ? ` <span class="pill ok" title="${t('login_has')}">${ic('lock')} <bdi dir="ltr">${esc(STAFFROWS[m.id])}</bdi></span>` : ''}<br><small>${esc(m.role || '—')}${m.wa ? ` · <bdi dir="ltr">${esc(m.wa)}</bdi>` : ''}</small></div>
       ${d ? `<a class="btn sm wa" href="https://wa.me/${d}" target="_blank" rel="noopener">${ic('chat')} ${t('team_wa_btn')}</a>` : ''}
-      <button class="btn sm ico" data-action="edit-member" data-id="${m.id}" title="${t('edit')}" aria-label="${t('edit')}">${ic('edit')}</button></div>`;
+      ${ro ? '' : `<button class="btn sm ico" data-action="edit-member" data-id="${m.id}" title="${t('edit')}" aria-label="${t('edit')}">${ic('edit')}</button>`}</div>`;
   }).join('');
   return `<div class="two prof" style="align-items:start">
     <section class="card"><h3>${t('prof_title')}</h3><p class="sub">${t('prof_sub')}</p>
       <form id="prof-form" class="form" autocomplete="off">
-        ${fld('company', t('prof_company'), p.company, 'text', 'full maxlength="80"')}
-        ${fld('location', t('prof_loc'), p.location, 'text', 'full maxlength="120"')}
-        <label class="f full">${t('prof_desc')}<textarea name="desc" maxlength="600">${esc(p.desc)}</textarea></label>
-        ${user && user.email ? `<label class="f full">${t('prof_email')}<input value="${esc(user.email)}" dir="ltr" disabled></label>` : ''}
-        <div class="full"><button class="btn primary" type="submit">${t('prof_save')}</button></div>
+        ${fld('company', t('prof_company'), p.company, 'text', 'full maxlength="80"' + (ro ? ' disabled' : ''))}
+        ${fld('location', t('prof_loc'), p.location, 'text', 'full maxlength="120"' + (ro ? ' disabled' : ''))}
+        <label class="f full">${t('prof_desc')}<textarea name="desc" maxlength="600"${ro ? ' disabled' : ''}>${esc(p.desc)}</textarea></label>
+        ${user && user.email && !ro ? `<label class="f full">${t('prof_email')}<input value="${esc(user.email)}" dir="ltr" disabled></label>` : ''}
+        ${ro ? '' : `<div class="full"><button class="btn primary" type="submit">${t('prof_save')}</button></div>`}
       </form></section>
     <section class="card"><h3>${t('team_title')} <span class="count">${team.length.toLocaleString(loc())}</span></h3><p class="sub">${t('team_sub')}</p>
       ${rows || `<div class="empty">${t('team_none')}</div>`}
-      <div class="bar" style="margin:14px 0 0"><button class="btn primary" data-action="add-member">${ic('plus')} ${t('team_add')}</button></div></section></div>`;
+      ${ro ? '' : `<div class="bar" style="margin:14px 0 0"><button class="btn primary" data-action="add-member">${ic('plus')} ${t('team_add')}</button></div>`}</section></div>`;
 };
 
 /* ---------------- باحث الهاشتاجات ---------------- */
