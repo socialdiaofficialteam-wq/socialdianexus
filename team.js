@@ -13,7 +13,7 @@ Object.assign(T.ar, {
   login_saved: 'اتحفظ حساب الدخول. اليوزرنيم: {u}', login_has: 'عنده حساب دخول', login_confirm_del: 'هيتحذف الموظف وحساب دخوله ومش هيقدر يدخل تاني. متأكد؟',
   serr_username_invalid: 'اليوزرنيم حروف إنجليزي صغيرة وأرقام و . _ - بس (من 3 لـ 30)', serr_weak_password: 'الباسورد لازم 8 حروف أو أرقام على الأقل', serr_need_password: 'اكتب باسورد للموظف',
   serr_username_taken: 'اليوزرنيم ده مستخدم، اختار غيره', serr_member_not_found: 'الموظف لسه ما اتحفظش. جرّب تاني', serr_limit_reached: 'وصلت للحد الأقصى من حسابات الدخول (50)',
-  serr_forbidden: 'مش مسموح للموظف يعمل ده', serr_unauthorized: 'سجّل دخول تاني', serr_not_configured: 'ميزة الموظفين مش مفعّلة على السيرفر. راجع الإعداد (SUPABASE_SERVICE_ROLE_KEY).', serr_upstream: 'السيرفر مش متاح دلوقتي، جرّب تاني',
+  serr_not_deployed: 'سيرفر الموظفين لسه مش متحدّث: ارفع src/staff.js و src/worker.js وانتظر Deploy يخلص.', serr_bad_request: 'بيانات ناقصة أو غلط، راجع اليوزرنيم والباسورد', serr_not_found: 'المسار مش موجود على السيرفر', serr_forbidden: 'مش مسموح للموظف يعمل ده', serr_unauthorized: 'سجّل دخول تاني', serr_not_configured: 'ميزة الموظفين مش مفعّلة على السيرفر. راجع الإعداد (SUPABASE_SERVICE_ROLE_KEY).', serr_upstream: 'السيرفر مش متاح دلوقتي، جرّب تاني',
   chat_title: 'شات الفريق', chat_sub: 'محادثة خاصة بأعضاء الشركة بس.', chat_ph: 'اكتب رسالة…', chat_send: 'إرسال', chat_empty: 'مفيش رسائل لسه. ابدأ المحادثة.', chat_owner: 'المدير', chat_del: 'مسح الرسالة', chat_today: 'النهارده', chat_err: 'الرسالة ماتبعتتش، جرّب تاني', chat_members: 'أعضاء الشركة'
 });
 Object.assign(T.en, {
@@ -26,7 +26,7 @@ Object.assign(T.en, {
   login_saved: 'Sign-in saved. Username: {u}', login_has: 'Has a sign-in account', login_confirm_del: 'This deletes the member and their sign-in. They won’t be able to log in again. Sure?',
   serr_username_invalid: 'Username: lowercase English letters, numbers and . _ - only (3–30)', serr_weak_password: 'Password must be at least 8 characters', serr_need_password: 'Enter a password for this member',
   serr_username_taken: 'That username is taken, pick another', serr_member_not_found: 'The member isn’t saved yet. Try again', serr_limit_reached: 'You reached the limit of 50 sign-in accounts',
-  serr_forbidden: 'Staff can’t do this', serr_unauthorized: 'Please sign in again', serr_not_configured: 'Staff accounts aren’t enabled on the server. Check the setup (SUPABASE_SERVICE_ROLE_KEY).', serr_upstream: 'Server unavailable right now, try again',
+  serr_not_deployed: 'The staff server isn’t updated yet: upload src/staff.js and src/worker.js and wait for the deploy.', serr_bad_request: 'Missing or invalid data, check the username and password', serr_not_found: 'Route not found on the server', serr_forbidden: 'Staff can’t do this', serr_unauthorized: 'Please sign in again', serr_not_configured: 'Staff accounts aren’t enabled on the server. Check the setup (SUPABASE_SERVICE_ROLE_KEY).', serr_upstream: 'Server unavailable right now, try again',
   chat_title: 'Team chat', chat_sub: 'A private conversation for your company’s members only.', chat_ph: 'Write a message…', chat_send: 'Send', chat_empty: 'No messages yet. Start the conversation.', chat_owner: 'Manager', chat_del: 'Delete message', chat_today: 'Today', chat_err: 'Message not sent, try again', chat_members: 'Company members'
 });
 
@@ -41,7 +41,11 @@ async function staffApi(action, body) {
     r = await fetch('/api/staff/' + action, { method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + (tok || '') }, body: JSON.stringify(body) });
     try { j = await r.json(); } catch (e) {}
   } catch (e) { throw new Error(serrMsg('upstream')); }
-  if (!r.ok) throw new Error(serrMsg(j.error));
+  if (!r.ok) {
+    if (!j.error) throw new Error(r.status === 404 || r.status === 405 ? t('serr_not_deployed') : t('err_default') + ' (HTTP ' + r.status + ')');
+    const extra = j.step ? ` [${j.step} ${j.status || ''}${j.msg ? ': ' + j.msg : ''}]` : '';
+    throw new Error(serrMsg(j.error) + extra);
+  }
   return j;
 }
 async function staffLogin(username, password) {
