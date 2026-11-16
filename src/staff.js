@@ -3,7 +3,7 @@
 //   POST /api/staff/save    {member_id, username, password?}  (صاحب الشركة) إنشاء/تعديل حساب دخول لموظف
 //   POST /api/staff/remove  {member_id}                         (صاحب الشركة) حذف حساب الدخول
 // المتغيرات (Cloudflare → Worker → Settings → Variables and Secrets):
-//   SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY (Secret، مهم جداً مايبانش في المتصفح)
+//   SUPABASE_URL, SUPABASE_NON_KEY, SUPABASE_SERVICE_ROLE_KEY (Secret، مهم جداً مايبانش في المتصفح)
 //   STAFF_EMAIL_DOMAIN  اختياري: نطاق وهمي للإيميل الداخلي للموظف (الافتراضي staff.socialdia-nexus.app). مفيش إيميلات بتتبعت عليه.
 import { json } from '../functions/api/ai.js';
 
