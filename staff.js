@@ -25,6 +25,8 @@ function throttle(key, max) {
   arr.push(now); tries.set(key, arr); return true;
 }
 
+// خطأ من Supabase: بنرجّع الخطوة والكود والرسالة عشان نعرف السبب بالظبط
+const up = (step, r) => json({ error: 'upstream', step, status: r && r.status, msg: String((r && r.body && (r.body.msg || r.body.message || r.body.error_description || r.body.error)) || '').slice(0, 160) }, 502);
 const srvHeaders = c => ({ apikey: c.srv, Authorization: 'Bearer ' + c.srv, 'content-type': 'application/json' });
 async function rest(c, path, opts = {}) {
   const r = await fetch(c.url + '/rest/v1/' + path, { ...opts, headers: { ...srvHeaders(c), ...(opts.headers || {}) } });
@@ -82,7 +84,7 @@ async function save(c, o, b) {
   if (!Array.isArray(team) || !team.some(m => m && m.id === memberId)) return json({ error: 'member_not_found' }, 404);
 
   const ex = await rest(c, `staff_members?owner=eq.${enc(o.id)}&member_id=eq.${enc(memberId)}&select=staff_user_id,username`);
-  if (!ex.ok) return json({ error: 'upstream' }, 502);
+  if (!ex.ok) return up('staff_members.select', ex);
   const cur = ex.body && ex.body[0];
   const taken = async name => { const q = await rest(c, `staff_members?username=eq.${enc(name)}&select=member_id`); return !q.ok || (q.body && q.body.length > 0); };
 
@@ -95,10 +97,10 @@ async function save(c, o, b) {
     }
     if (!Object.keys(upd).length) return json({ ok: true, username: cur.username });
     const r = await admin(c, 'PUT', '/' + cur.staff_user_id, upd);
-    if (!r.ok) return json({ error: 'upstream' }, 502);
+    if (!r.ok) return up('auth.update', r);
     if (upd.email) {
       const p = await rest(c, `staff_members?owner=eq.${enc(o.id)}&member_id=eq.${enc(memberId)}`, { method: 'PATCH', body: JSON.stringify({ username }), headers: { Prefer: 'return=minimal' } });
-      if (!p.ok) { await admin(c, 'PUT', '/' + cur.staff_user_id, { email: emailOf(c, cur.username), email_confirm: true }); return json({ error: 'upstream' }, 502); }
+      if (!p.ok) { await admin(c, 'PUT', '/' + cur.staff_user_id, { email: emailOf(c, cur.username), email_confirm: true }); return up('staff_members.update', p); }
     }
     return json({ ok: true, username: username || cur.username });
   }
@@ -111,9 +113,9 @@ async function save(c, o, b) {
     email: emailOf(c, username), password, email_confirm: true,
     app_metadata: { role: 'staff', owner: o.id, member_id: memberId }, user_metadata: { username }
   });
-  if (!cr.ok || !cr.body || !cr.body.id) return json({ error: cr.status === 422 ? 'username_taken' : 'upstream' }, cr.status === 422 ? 409 : 502);
+  if (!cr.ok || !cr.body || !cr.body.id) return cr.status === 422 ? json({ error: 'username_taken' }, 409) : up('auth.create', cr);
   const ins = await rest(c, 'staff_members', { method: 'POST', body: JSON.stringify({ owner: o.id, member_id: memberId, staff_user_id: cr.body.id, username }), headers: { Prefer: 'return=minimal' } });
-  if (!ins.ok) { await admin(c, 'DELETE', '/' + cr.body.id); return json({ error: ins.status === 409 ? 'username_taken' : 'upstream' }, ins.status === 409 ? 409 : 502); }
+  if (!ins.ok) { await admin(c, 'DELETE', '/' + cr.body.id); return ins.status === 409 ? json({ error: 'username_taken' }, 409) : up('staff_members.insert', ins); }
   return json({ ok: true, username });
 }
 
@@ -121,13 +123,13 @@ async function remove(c, o, b) {
   const memberId = String(b.member_id || '');
   if (!MID.test(memberId)) return json({ error: 'bad_request' }, 400);
   const ex = await rest(c, `staff_members?owner=eq.${enc(o.id)}&member_id=eq.${enc(memberId)}&select=staff_user_id`);
-  if (!ex.ok) return json({ error: 'upstream' }, 502);
+  if (!ex.ok) return up('staff_members.select', ex);
   const cur = ex.body && ex.body[0];
   if (!cur) return json({ ok: true });
   const d = await rest(c, `staff_members?owner=eq.${enc(o.id)}&member_id=eq.${enc(memberId)}`, { method: 'DELETE', headers: { Prefer: 'return=minimal' } });
-  if (!d.ok) return json({ error: 'upstream' }, 502);     // أول حاجة نقفل الوصول
+  if (!d.ok) return up('staff_members.delete', d);     // أول حاجة نقفل الوصول
   const r = await admin(c, 'DELETE', '/' + cur.staff_user_id);
-  if (!r.ok && r.status !== 404) return json({ error: 'upstream' }, 502);
+  if (!r.ok && r.status !== 404) return up('auth.delete', r);
   return json({ ok: true });
 }
 
