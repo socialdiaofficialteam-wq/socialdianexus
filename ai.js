@@ -80,32 +80,43 @@ export async function onRequest({ request, env }) {
   ].filter(Boolean).join('\n');
 
   try {
-    let r, text;
-    if (gKey) {
-      const gm = env.GEMINI_MODEL || 'gemini-2.5-flash';
-      const gen = { maxOutputTokens: 2000 };
-      if (/flash/.test(gm)) gen.thinkingConfig = { thinkingBudget: 0 }; // بدون تفكير داخلي: أسرع وأرخص
-      r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(gm) + ':generateContent', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json', 'x-goog-api-key': gKey },
-        body: JSON.stringify({ systemInstruction: { parts: [{ text: system }] }, contents: [{ role: 'user', parts: [{ text: user }] }], generationConfig: gen })
-      });
-      if (!r.ok) return json({ error: 'upstream_' + r.status }, 502);
-      const j = await r.json();
-      text = ((j.candidates && j.candidates[0] && j.candidates[0].content && j.candidates[0].content.parts) || []).map(p => p.text || '').join('').trim();
-    } else {
-      r = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json', 'x-api-key': aKey, 'anthropic-version': '2023-06-01' },
-        body: JSON.stringify({ model: env.AI_MODEL || 'claude-haiku-5-5', max_tokens: 1200, system, messages: [{ role: 'user', content: user }] })
-      });
-      if (!r.ok) return json({ error: 'upstream_' + r.status }, 502);
-      const j = await r.json();
-      text = (j.content || []).map(p => p.text || '').join('').trim();
-    }
+    const text = await callModel(env, system, user, { maxTokens: 2000 });
     if (!text) return json({ error: 'empty' }, 502);
     return json({ text });
   } catch (e) {
-    return json({ error: 'server_error' }, 500);
+    return json({ error: e && e.status ? 'upstream_' + e.status : 'server_error' }, e && e.status ? 502 : 500);
   }
 }
+
+// نداء موحّد للنموذج (Gemini أو Claude). opts.json = true بيطلب JSON بس. بيرمي { status } لو الـ API رجّع خطأ.
+export async function callModel(env, system, user, opts = {}) {
+  const gKey = env.GEMINI_API_KEY, aKey = env.ANTHROPIC_API_KEY;
+  if (!gKey && !aKey) throw Object.assign(new Error('no_key'), { code: 'no_key' });
+  let r, text;
+  if (gKey) {
+    const gm = env.GEMINI_MODEL || 'gemini-2.5-flash';
+    const gen = { maxOutputTokens: opts.maxTokens || 2000 };
+    if (opts.json) gen.responseMimeType = 'application/json';
+    if (/flash/.test(gm)) gen.thinkingConfig = { thinkingBudget: 0 }; // بدون تفكير داخلي: أسرع وأرخص
+    r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(gm) + ':generateContent', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-goog-api-key': gKey },
+      body: JSON.stringify({ systemInstruction: { parts: [{ text: system }] }, contents: [{ role: 'user', parts: [{ text: user }] }], generationConfig: gen })
+    });
+    if (!r.ok) throw Object.assign(new Error('upstream'), { status: r.status });
+    const j = await r.json();
+    text = ((j.candidates && j.candidates[0] && j.candidates[0].content && j.candidates[0].content.parts) || []).map(p => p.text || '').join('').trim();
+  } else {
+    r = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-api-key': aKey, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({ model: env.AI_MODEL || 'claude-haiku-5-5', max_tokens: Math.min(opts.maxTokens || 1200, 4000), system, messages: [{ role: 'user', content: user }] })
+    });
+    if (!r.ok) throw Object.assign(new Error('upstream'), { status: r.status });
+    const j = await r.json();
+    text = (j.content || []).map(p => p.text || '').join('').trim();
+  }
+  return text;
+}
+
+export { authUser, allowed, json, clip };
