@@ -329,11 +329,6 @@ end $$;
 
 -- تحديث كاش واجهة Supabase بعد تغيير الجداول (يمنع خطأ: Could not find the table ... in the schema cache)
 notify pgrst, 'reload schema';
-
--- ============ 8) تعيين أول أدمن ============
--- 1) سجّل حساب عادي من الموقع بإيميلك.
--- 2) بدّل الإيميل تحت بإيميلك وشغّل السطرين دول لوحدهم:
---
 insert into public.admins (user_id)
   select id from auth.users where email = 'admin@adsocialdia.app'
   on conflict do nothing;
