@@ -1,7 +1,10 @@
 // Cloudflare Pages Function — المسار: /api/ai
 // Cloudflare → Pages → المشروع → Settings → Variables and Secrets:
-//   GEMINI_API_KEY      (Secret) مفتاح Google Gemini  } واحد منهم على الأقل. لو الاتنين موجودين
-//   ANTHROPIC_API_KEY   (Secret) مفتاح Claude          } بيتستخدم Gemini
+//   (الأساسي) Binding اسمه AI = Cloudflare Workers AI، موديل مفتوح من غير أي مفتاح خارجي (موجود في wrangler.jsonc)
+//   CF_AI_MODEL         اختياري، الافتراضي @cf/qwen/qwen3-30b-a3b-fp8
+//   GEMINI_API_KEY      (Secret) اختياري: احتياطي لو حصة Workers AI خلصت  } لو موجودين بيتجرّبوا
+//   ANTHROPIC_API_KEY   (Secret) اختياري: احتياطي تاني                       } بالترتيب بعد Workers AI
+//   AI_PROVIDER         اختياري: cloudflare | gemini | claude لتقديم مزوّد معيّن
 //   GEMINI_MODEL        اختياري، الافتراضي gemini-2.5-flash
 //   SUPABASE_URL        نفس الـ Project URL        } الاتنين موجودين: الدخول إجباري
 //   SUPABASE_ANON_KEY   نفس الـ anon key           } والحد الساعي لكل مستخدم
@@ -49,8 +52,7 @@ const json = (obj, status = 200, extra = {}) =>
 
 export async function onRequest({ request, env }) {
   if (request.method !== 'POST') return json({ error: 'method_not_allowed' }, 405, { Allow: 'POST' });
-  const gKey = env.GEMINI_API_KEY, aKey = env.ANTHROPIC_API_KEY;
-  if (!gKey && !aKey) return json({ error: 'no_key' }, 503);
+  if (!env.AI && !env.GEMINI_API_KEY && !env.ANTHROPIC_API_KEY) return json({ error: 'no_key' }, 503);
 
   const SB_URL = (env.SUPABASE_URL || '').replace(/\/$/, '');
   const SB_KEY = env.SUPABASE_ANON_KEY || '';
@@ -84,39 +86,82 @@ export async function onRequest({ request, env }) {
     if (!text) return json({ error: 'empty' }, 502);
     return json({ text });
   } catch (e) {
+    if (e && e.code === 'quota') return json({ error: 'quota' }, 503);
     return json({ error: e && e.status ? 'upstream_' + e.status : 'server_error' }, e && e.status ? 502 : 500);
   }
 }
 
-// نداء موحّد للنموذج (Gemini أو Claude). opts.json = true بيطلب JSON بس. بيرمي { status } لو الـ API رجّع خطأ.
+// نداء موحّد للنموذج. الترتيب: Cloudflare Workers AI (موديل مفتوح بدون مفتاح خارجي) ← Gemini ← Claude.
+// لو أول مزوّد فشل (حصة يومية خلصت مثلاً) بنجرّب اللي بعده لو متاح. AI_PROVIDER=gemini|claude|cloudflare بيقدّم مزوّد معيّن.
+// opts: { json, maxTokens, temperature, messages:[{role:'user'|'assistant',content}] }  بيرمي { status, code } لو كله فشل.
 export async function callModel(env, system, user, opts = {}) {
-  const gKey = env.GEMINI_API_KEY, aKey = env.ANTHROPIC_API_KEY;
-  if (!gKey && !aKey) throw Object.assign(new Error('no_key'), { code: 'no_key' });
-  let r, text;
-  if (gKey) {
-    const gm = env.GEMINI_MODEL || 'gemini-2.5-flash';
-    const gen = { maxOutputTokens: opts.maxTokens || 2000 };
-    if (opts.json) gen.responseMimeType = 'application/json';
-    if (/flash/.test(gm)) gen.thinkingConfig = { thinkingBudget: 0 }; // بدون تفكير داخلي: أسرع وأرخص
-    r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(gm) + ':generateContent', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', 'x-goog-api-key': gKey },
-      body: JSON.stringify({ systemInstruction: { parts: [{ text: system }] }, contents: [{ role: 'user', parts: [{ text: user }] }], generationConfig: gen })
-    });
-    if (!r.ok) throw Object.assign(new Error('upstream'), { status: r.status });
-    const j = await r.json();
-    text = ((j.candidates && j.candidates[0] && j.candidates[0].content && j.candidates[0].content.parts) || []).map(p => p.text || '').join('').trim();
-  } else {
-    r = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', 'x-api-key': aKey, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({ model: env.AI_MODEL || 'claude-haiku-5-5', max_tokens: Math.min(opts.maxTokens || 1200, 4000), system, messages: [{ role: 'user', content: user }] })
-    });
-    if (!r.ok) throw Object.assign(new Error('upstream'), { status: r.status });
-    const j = await r.json();
-    text = (j.content || []).map(p => p.text || '').join('').trim();
+  const msgs = (opts.messages && opts.messages.length ? opts.messages : [{ role: 'user', content: user }])
+    .map(m => ({ role: m.role === 'assistant' ? 'assistant' : 'user', content: String(m.content || '') }));
+  const avail = { cloudflare: !!(env.AI && env.AI.run), gemini: !!env.GEMINI_API_KEY, claude: !!env.ANTHROPIC_API_KEY };
+  let order = ['cloudflare', 'gemini', 'claude'].filter(p => avail[p]);
+  const want = String(env.AI_PROVIDER || '').toLowerCase();
+  if (avail[want]) order = [want, ...order.filter(p => p !== want)];
+  if (!order.length) throw Object.assign(new Error('no_key'), { code: 'no_key' });
+  const run = { cloudflare: viaCloudflare, gemini: viaGemini, claude: viaClaude };
+  let last;
+  for (const p of order) {
+    try {
+      const text = await run[p](env, system, msgs, opts);
+      if (text) return text;
+      last = Object.assign(new Error('empty'), { status: 502, code: 'empty' });
+    } catch (e) { last = e; }
   }
-  return text;
+  throw last;
+}
+
+const stripThink = t => String(t || '').replace(/<think>[\s\S]*?<\/think>/gi, '').replace(/^\s*<\/?think>\s*/i, '').trim();
+
+async function viaCloudflare(env, system, msgs, opts) {
+  const model = env.CF_AI_MODEL || '@cf/qwen/qwen3-30b-a3b-fp8';
+  let out;
+  try {
+    out = await env.AI.run(model, {
+      messages: [{ role: 'system', content: system + ' /no_think' }, ...msgs],
+      max_tokens: Math.min(opts.maxTokens || 1500, 3000),
+      temperature: opts.temperature == null ? 0.7 : opts.temperature
+    });
+  } catch (e) {
+    const m = String((e && e.message) || e);
+    const quota = /4006|allocation|neurons|quota|daily/i.test(m);
+    throw Object.assign(new Error('upstream'), { status: quota ? 429 : 502, code: quota ? 'quota' : 'upstream' });
+  }
+  // شكلين للرد: { response } أو متوافق مع OpenAI { choices:[{ message:{ content } }] }
+  let text = '';
+  if (out && typeof out.response === 'string') text = out.response;
+  else if (out && out.choices && out.choices[0]) text = (out.choices[0].message && out.choices[0].message.content) || out.choices[0].text || '';
+  return stripThink(text);
+}
+
+async function viaGemini(env, system, msgs, opts) {
+  const gm = env.GEMINI_MODEL || 'gemini-2.5-flash';
+  const gen = { maxOutputTokens: opts.maxTokens || 2000 };
+  if (opts.temperature != null) gen.temperature = opts.temperature;
+  if (opts.json) gen.responseMimeType = 'application/json';
+  if (/flash/.test(gm)) gen.thinkingConfig = { thinkingBudget: 0 }; // بدون تفكير داخلي: أسرع وأرخص
+  const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(gm) + ':generateContent', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'x-goog-api-key': env.GEMINI_API_KEY },
+    body: JSON.stringify({ systemInstruction: { parts: [{ text: system }] }, contents: msgs.map(m => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] })), generationConfig: gen })
+  });
+  if (!r.ok) throw Object.assign(new Error('upstream'), { status: r.status });
+  const j = await r.json();
+  return ((j.candidates && j.candidates[0] && j.candidates[0].content && j.candidates[0].content.parts) || []).map(p => p.text || '').join('').trim();
+}
+
+async function viaClaude(env, system, msgs, opts) {
+  const r = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'x-api-key': env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
+    body: JSON.stringify({ model: env.AI_MODEL || 'claude-haiku-5-5', max_tokens: Math.min(opts.maxTokens || 1200, 4000), system, messages: msgs })
+  });
+  if (!r.ok) throw Object.assign(new Error('upstream'), { status: r.status });
+  const j = await r.json();
+  return (j.content || []).map(p => p.text || '').join('').trim();
 }
 
 export { authUser, allowed, json, clip };
