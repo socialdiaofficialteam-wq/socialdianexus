@@ -1,7 +1,7 @@
 // /api/trends — باحث الهاشتاجات الرائجة
 //   المصدر 1: Google Trends (عمليات البحث الرائجة الآن في الدولة) — مجاني بدون مفتاح
 //   المصدر 2: الذكاء الاصطناعي (Gemini/Claude) بيقترح هاشتاجات للمجال والمنصة بناءً على الترند الحقيقي
-// ملاحظة: مفيش API رسمي مجاني لعدّاد هاشتاجات إنستجرام/تيك توك، فمش بنعرض أرقام مستدمة منهم.
+// ملاحظة: مفيش API رسمي مجاني لعدّاد هاشتاجات إنستجرام/تيك توك، فمش بنعرض أرقام مستخدمة منهم.
 import { authUser, allowed, json, callModel, clip } from '../functions/api/ai.js';
 
 const PLATS = ['instagram', 'tiktok', 'facebook', 'x', 'linkedin', 'youtube'];
@@ -102,7 +102,7 @@ export async function handleTrends(request, env) {
   const sources = [];
   if (trending.length) sources.push('google');
   let groups = [];
-  if (env.GEMINI_API_KEY || env.ANTHROPIC_API_KEY) {
+  if (env.AI || env.GEMINI_API_KEY || env.ANTHROPIC_API_KEY) {
     try { groups = await aiGroups(env, { geo, niche, platform, lang, topics }); } catch (e) { groups = []; }
     if (groups.length) sources.push('ai');
   }
