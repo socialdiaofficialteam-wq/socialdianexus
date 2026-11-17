@@ -428,7 +428,7 @@ const VIEWS = {
 };
 
 /* ---------------- الرسم ---------------- */
-const NAV = [['dashboard', 'dashboard'], ['clients', 'users'], ['tasks', 'tasks'], ['calendar', 'calendar'], ['chat', 'chat', 'cloud'], ['content', 'layers'], ['trends', 'flame'], ['ai', 'sparkles'], ['profile', 'building'], ['settings', 'sliders', 'owner'], ['site', 'shield', 'admin'], ['home', 'home']];
+const NAV = [['dashboard', 'dashboard'], ['clients', 'users'], ['tasks', 'tasks'], ['calendar', 'calendar'], ['chat', 'chat', 'cloud'], ['content', 'layers'], ['trends', 'flame'], ['ai', 'sparkles'], ['assistant', 'bot'], ['profile', 'building'], ['settings', 'sliders', 'owner'], ['site', 'shield', 'admin'], ['home', 'home']];
 function renderAuth() {
   const stf = CLOUD && authMode === 'staff';
   const su = !stf && authMode === 'signup' && SITE.options.show_signup;
