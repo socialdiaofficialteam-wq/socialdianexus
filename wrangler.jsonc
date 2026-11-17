@@ -1,5 +1,5 @@
 {
-  "name": "socialdianexus",
+  "name": "nexus",
   "main": "src/worker.js",
   "compatibility_date": "2025-01-01",
   "ai": { "binding": "AI" },
